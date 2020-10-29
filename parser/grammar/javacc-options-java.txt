@@ -1,0 +1,138 @@
+options {
+  STATIC = false;
+  LOOKAHEAD=3;
+  IGNORE_CASE=true;
+  UNICODE_INPUT=true;
+  ERROR_REPORTING=false;
+  NODE_DEFAULT_VOID = true;
+  NODE_SCOPE_HOOK = true;
+  NODE_CLASS = "AstNode";
+  NODE_PREFIX = "";
+  MULTI = true;
+  VISITOR = true;
+  VISITOR_RETURN_TYPE = "void";
+  VISITOR_DATA_TYPE = "Void";
+}
+
+PARSER_BEGIN(SqlParser)
+package com.facebook.coresql.parser;
+
+public class SqlParser {
+    private boolean IsIdNonReservedWord() {
+      int kind = getToken(1).kind;
+      if (kind == regular_identifier || kind == delimited_identifier || kind == Unicode_delimited_identifier) return true;
+
+      if (!(kind >= MIN_NON_RESERVED_WORD && kind <= MAX_NON_RESERVED_WORD)) return false;  // Not a nonreserved word.
+
+      // Some special cases.
+      switch (kind) {
+        // Some contextual keywords
+        case GROUP:
+        case ORDER:
+        case PARTITION:
+          return getToken(2).kind != BY;
+
+        case LIMIT:
+          return getToken(2).kind != unsigned_integer;
+
+        case ROWS:
+          return getToken(2).kind != BETWEEN;
+
+        // Some builtin functions
+        case TRIM:
+        case POSITION:
+        case MOD:
+        case POWER:
+        case RANK:
+        case ROW_NUMBER:
+        case FLOOR:
+        case MIN:
+        case MAX:
+        case UPPER:
+        case LOWER:
+        case CARDINALITY:
+        case ABS:
+          return getToken(2).kind != lparen;
+
+        default:
+          return true;
+       }
+    }
+
+    private boolean SyncToSemicolon() {
+      while (getToken(1).kind != EOF && getToken(1).kind != SqlParserConstants.semicolon) getNextToken();
+
+      if (getToken(1).kind == semicolon) {
+        getNextToken();
+      }
+
+      return true;
+    }
+
+    private boolean NotEof() {
+      return getToken(1).kind != EOF;
+    }
+
+    public void PushNode(Node node) { jjtree.pushNode(node); }
+    public Node PopNode() { return jjtree.popNode(); }
+
+    void jjtreeOpenNodeScope(Node node) {
+      ((AstNode)node).beginToken = getToken(1);
+    }
+
+    void jjtreeCloseNodeScope(Node node) {
+      AstNode astNode = ((AstNode)node);
+      astNode.endToken = getToken(0);
+      Token t = astNode.beginToken;
+
+      // For some nodes, the node is opened after some children are already created. Reset the begin for those to be
+      // the begin of the left-most child.
+      if (astNode.NumChildren() > 0) {
+        Token t0 = astNode.GetChild(0).beginToken;
+        if (t0.beginLine < t.beginLine || (t0.beginLine == t.beginLine && t0.beginColumn < t.beginColumn)) {
+          astNode.beginToken = t0;
+        }
+      }
+    }
+
+    public AstNode getResult()
+    {
+      return (AstNode) jjtree.popNode();
+    }
+  }
+
+PARSER_END(SqlParser)
+
+TOKEN_MGR_DECLS:
+{
+  void setKindToIdentifier(Token t) {
+    t.kind = regular_identifier;
+  }
+
+  void setUnicodeLiteralType(Token t) {
+    t.kind = unicode_literal;
+  }
+
+  void StoreImage(Token matchedToken) {
+    matchedToken.image = image.toString();
+  }
+}
+
+// Temporary entry point
+Node CompilationUnit() #CompilationUnit:
+{}
+{
+    (
+      LOOKAHEAD({ NotEof() })
+      try {
+        direct_SQL_statement()
+      } catch(ParseException pe) {
+        System.err.println("Parse error: " + getToken(1).beginLine + ":" + getToken(1).beginColumn + " at token: " + getToken(1).image);
+        SyncToSemicolon();
+      }
+    )*
+
+    <EOF>
+
+    { return jjtThis; }
+}

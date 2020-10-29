@@ -1,0 +1,101 @@
+date_string() ::=
+ "'" unquoted_date_string() "'" 
+;
+
+time_string() ::=
+ "'" unquoted_time_string() "'" 
+;
+
+timestamp_string() ::=
+ "'" unquoted_timestamp_string() "'" 
+;
+
+time_zone_interval() ::=
+sign() hours_value() ":" minutes_value()
+;
+
+date_value() ::=
+years_value() "-" months_value() "-" days_value()
+;
+
+time_value() ::=
+hours_value() ":" minutes_value() ":" seconds_value()
+;
+
+interval_string() ::=
+ "'" unquoted_interval_string() "'" 
+;
+
+unquoted_date_string() ::=
+date_value()
+;
+
+unquoted_time_string() ::=
+time_value() [ time_zone_interval() ]
+;
+
+unquoted_timestamp_string() ::=
+unquoted_date_string() space() unquoted_time_string()
+;
+
+unquoted_interval_string() ::=
+[ sign() ] ( year_month_literal() | day_time_literal() )
+;
+
+year_month_literal() ::=
+years_value() [ "-" months_value() ]
+| months_value()
+;
+
+day_time_literal() ::=
+day_time_interval()
+| time_interval()
+;
+
+day_time_interval() ::=
+days_value() [ space() hours_value() [ ":" minutes_value()
+[ ":" seconds_value() ] ] ]
+;
+
+time_interval() ::=
+hours_value() [ ":" minutes_value() [ ":" seconds_value() ] ]
+| minutes_value() [ ":" seconds_value() ]
+| seconds_value()
+;
+
+years_value() ::=
+datetime_value()
+;
+
+months_value() ::=
+datetime_value()
+;
+
+days_value() ::=
+datetime_value()
+;
+
+hours_value() ::=
+datetime_value()
+;
+
+minutes_value() ::=
+datetime_value()
+;
+
+seconds_value() ::=
+seconds_integer_value() [ "." [ seconds_fraction() ] ]
+;
+
+seconds_integer_value() ::=
+unsigned_integer()
+;
+
+seconds_fraction() ::=
+unsigned_integer()
+;
+
+datetime_value() ::=
+unsigned_integer()
+;
+

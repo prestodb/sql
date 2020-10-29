@@ -1,0 +1,173 @@
+void use_statement() #UseStatement:
+{}
+{
+    "USE" identifier_chain()
+}
+
+void lambda() #Lambda(2):
+{}
+{
+    lambda_params() lambda_body()
+}
+
+void lambda_body() #LambdaBody:
+{}
+{
+    "->" value_expression()
+}
+
+void lambda_params() #LambdaParams:
+{}
+{
+    actual_identifier()
+  | "(" [ actual_identifier() ( "," actual_identifier() )* ] ")"
+}
+
+void if_not_exists():
+{}
+{
+    "IF" "NOT" "EXISTS"
+}
+
+void identifier_suffix_chain():
+{}
+{
+    ( ( "@" | ":" ) [ actual_identifier() ] )+
+}
+
+void limit_clause() #LimitClause:
+{}
+{
+    "LIMIT" ( <unsigned_integer> | "ALL" )
+}
+
+void presto_generic_type():
+{}
+{
+    presto_array_type()
+  | presto_map_type()
+  | ( <regular_identifier> "(" data_type() ( "," data_type() )* ")" )#ParameterizedType
+}
+
+void presto_array_type() #ArrayType():
+{}
+{
+    "ARRAY" "<" data_type() ">" // Non-standard
+  | "ARRAY" "(" data_type() ")" // Non-standard
+}
+
+void presto_map_type() #MapType():
+{}
+{
+    "MAP" "<" data_type() "," data_type() ">" // Non-standard
+  | "MAP" "(" data_type() "," data_type() ")" // Non-standard
+}
+
+void percent_operator():
+{}
+{
+    "%"
+}
+
+void distinct():
+{}
+{
+    "DISTINCT"
+}
+
+void grouping_expression():
+{}
+{
+    value_expression()
+} 
+
+void count():
+{}
+{
+    "COUNT" "(" ")"
+  | "\"COUNT\"" "(" [ set_quantifier() ] [ value_expression() | "*" ] ")"   // Just weird
+}
+
+void table_description():
+{}
+{
+    "COMMENT" character_string_literal()
+}
+
+void routine_description():
+{}
+{
+    "COMMENT" character_string_literal()
+}
+
+void column_description():
+{}
+{
+    "COMMENT" character_string_literal()
+}
+
+void presto_aggregation_function():
+{}
+{
+    "NUMERIC_HISTOGRAM"
+  | "HISTOGRAM"
+  | "APPROEX_PERCENTILE"
+  | "MAP_AGG"
+  | "SET_AGG"
+  | "MAP_UNION"
+}
+
+void presto_aggregations():
+{}
+{
+    presto_aggregation_function()
+    "(" [ [ set_quantifier() ] value_expression() ( "," value_expression() )* ] ")"
+}
+
+void try_cast() #TryExpression:
+{}
+{
+    "TRY_CAST" ( "(" cast_operand() "AS" cast_target() ")" )#CastExpression
+}
+
+void varbinary():
+{}
+{
+    "VARBINARY"
+}
+
+void table_attributes():
+{}
+{
+    "(" actual_identifier() "=" value_expression() ( "," actual_identifier() "=" value_expression() )* ")"  // Non-standard
+}
+
+void or_replace():
+{}
+{
+    "OR" "REPLACE"
+}
+
+void udaf_filter():
+{}
+{
+   filter_clause()
+}
+
+void extra_args_to_agg():
+{}
+{
+   ( "," value_expression() )+
+}
+
+void weird_identifiers():
+{}
+{
+    "_"
+}
+
+TOKEN:
+{
+    <identifier_starting_with_underscore: ("_")+ (<regular_identifier>)? > { setKindToIdentifier(matchedToken); }
+  | <generic_unicode: "U&'" ( ~["'"] | ("''") )* "'"> { setUnicodeLiteralType(matchedToken); }
+}

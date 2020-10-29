@@ -1,0 +1,258 @@
+TOKEN:
+{
+/*
+  <#SQL_terminal_character() ::=
+SQL_language_character()
+;
+
+| <#SQL_language_character() ::=
+simple_Latin_letter()
+| digit()
+| SQL_special_character()
+;
+
+| <#simple_Latin_letter() ::=
+simple_Latin_upper_case_letter()
+| simple_Latin_lower_case_letter()
+;
+
+| <#simple_Latin_upper_case_letter() ::=
+["A"-"Z"]
+;
+
+| <#simple_Latin_lower_case_letter() ::=
+["a"-"z"]
+;
+
+| <#SQL_special_character() ::=
+space()
+| "\""
+| "%"
+| "&"
+| "'"
+| left_paren()
+| right_paren()
+| asterisk()
+| plus_sign()
+| comma()
+| minus_sign()
+| period()
+| solidus()
+| colon()
+| semicolon()
+| less_than_operator()
+| equals_operator()
+| greater_than_operator()
+| question_mark()
+| "["
+| "]"
+| "^"
+| "_"
+| "|"
+| "{"
+| "}"
+;
+;
+
+token() ::=
+nondelimiter_token()
+| delimiter_token()
+;
+
+nondelimiter_token() ::=
+regular_identifier()
+| key_word()
+| unsigned_numeric_literal()
+| national_character_string_literal()
+| binary_string_literal()
+| large_object_length_token()
+| Unicode_delimited_identifier()
+| Unicode_character_string_literal()
+| SQL_language_identifier()
+;
+
+*/
+
+
+<regular_identifier: <identifier_body> >
+
+| <#identifier_body: <identifier_start> ( <identifier_part>  )* >
+
+| <#identifier_part: <identifier_start> | <identifier_extend> >
+
+| <#identifier_start: ["a"-"z"]  // temp
+/*!! See the Syntax Rules.*/
+>
+
+| <#identifier_extend:  ["\u00B7", "0"-"9", "_"] // temp
+//!! See the Syntax Rules.
+>
+
+| <large_object_length_token: ( <digit> )+ <multiplier> >
+
+| <multiplier: ["K", "M", "G", "T", "P"]>
+
+| <delimited_identifier: "\"" (<delimited_identifier_body>)? "\"" >   // Presto allows empty string as an id - yikes!
+
+| <#delimited_identifier_body: ( <delimited_identifier_part> )+ >
+
+| <#delimited_identifier_part: <nondoublequote_character> | <doublequote_symbol> >
+
+| <Unicode_delimited_identifier: "U" "&" "\"" <Unicode_delimiter_body> "\"" ( <Unicode_escape_specifier> )?  >
+
+| <#Unicode_escape_specifier: "UESCAPE" "'" <Unicode_escape_character> "'" >
+
+| <#Unicode_delimiter_body: ( <Unicode_identifier_part> )+ >
+
+| <#Unicode_identifier_part: <delimited_identifier_part> | <Unicode_escape_value> >
+
+| <#Unicode_escape_value: <Unicode_4_digit_escape_value> | <Unicode_6_digit_escape_value> | <Unicode_character_escape_value> >
+
+| <#Unicode_4_digit_escape_value: <Unicode_escape_character> <hexit> <hexit> <hexit> <hexit> >
+
+| <#Unicode_6_digit_escape_value: <Unicode_escape_character> "+" <hexit> <hexit> <hexit> <hexit> <hexit> <hexit> >
+
+| <#Unicode_character_escape_value: <Unicode_escape_character> <Unicode_escape_character> >
+
+| <#Unicode_escape_character:  ~["a"-"z", "0"-"9", "+", "'", "\"", "\n", "\t", " "]  // temp
+//17) If the source language character set contains <reverse solidus>, then let D
+//!! See the Syntax Rules.*/
+>
+
+| <#nondoublequote_character:  ~["\""]
+//!! See the Syntax Rules.
+>
+
+| <#doublequote_symbol: "\"\"" >
+
+/*
+delimiter_token: 
+<character_string_literal>
+| <date_string>
+| <time_string>
+| <timestamp_string>
+| <interval_string>
+| <delimited_identifier>
+| <SQL_special_character>
+| <"> "
+|  ">="
+|  "<="
+|  "||"
+|  "->"
+| "??("
+| "??)"
+|  "::"
+|  ".."
+|  "=>"
+>
+*/
+}
+
+SPECIAL_TOKEN:
+{
+<white_space:  <newline> | [ " ", "\t" ] // temp
+//!! See the Syntax Rules.
+>
+
+| <#newline:  (["\n", "\r"])+
+//!! See the Syntax Rules.
+>
+
+//| <comment: <simple_comment> | <bracketed_comment> >
+| <comment: <simple_comment>  >
+| <#simple_comment: <simple_comment_introducer> ( <comment_character>  )* (<newline>)? >
+
+| <#simple_comment_introducer: "--" >
+
+//| <#bracketed_comment: <bracketed_comment_introducer> <bracketed_comment_contents> <bracketed_comment_terminator> >
+
+
+//| <#bracketed_comment_terminator: "*/" >
+
+//| <#bracketed_comment_contents: ( <comment_character> | <separator>  )* 
+////!! See the Syntax Rules. 
+//>
+
+//| <#comment_character: <nonquote_character> | "'" >
+| <#comment_character: (~["\n", "\r"]) | "'" >
+
+| <skip_separator: (<white_space>)+ >
+
+//| <#key_word: <reserved_word> | <non_reserved_word> > >
+}
+
+
+MORE:
+{
+<bracketed_comment_introducer: "/*" > : comment_contents
+}
+
+<comment_contents>MORE:
+{
+  "*/" : match_comment
+ | <~[]>
+}
+
+<match_comment>SPECIAL_TOKEN:
+{
+  <coment_end: ""> { StoreImage(matchedToken); } : DEFAULT
+}
+
+TOKEN:
+{
+  <#separator: ( 
+    //TODO(kaikalur): fixit -- <comment> | <white_space>  )+ >
+    <white_space>  )+ >
+|
+  <#digit: ["0"-"9"] >
+| <#character_representation: <nonquote_character> | <quote_symbol> >
+
+| <#nonquote_character: ~["'"]
+//!! See the Syntax Rules.
+>
+
+| <#quote_symbol: "''" >
+
+| <quoted_string: "'" ( <character_representation> )* "'" >
+| <national_character_string_literal: "N" "'" ( <character_representation> )* "'" ( <separator> "'" ( <character_representation>  )* "'" )* >
+
+| <unicode_literal: "U" "&" "'" ( <Unicode_representation> )* "'" ( <separator> "'" ( <Unicode_representation>  )* "'" )* <Unicode_escape_specifier> > // TODO(kaikalur) - fixit
+
+| <#Unicode_representation: <character_representation> | <Unicode_escape_value> >
+
+//TODO(kaikalur): fixit
+| <#space: " ">  // temp
+| <binary_string_literal: "X" "'" ( <space> )* ( <hexit>  ( <space>  )* <hexit>  ( <space>  )* )* "'" ( <separator> "'" ( <space>  )* ( <hexit>  ( <space>  )* <hexit> ( <space>  )* )* "'" )* >
+
+| <#hexit: ["a"-"f", "0"-"9"] >
+
+
+//| <exact_numeric_literal: <unsigned_integer> ( "." ( <unsigned_integer>  )? )? | "." <unsigned_integer> >
+
+//| <sign: [ "+", "-" ] >
+
+| <unsigned_integer: ( <digit> )+ >
+| <float_literal: <unsigned_integer> ( "." ( <unsigned_integer>  )? ) | "." <unsigned_integer> >
+
+| <approximate_numeric_literal: <mantissa> "E" <exponent> >
+
+| <#mantissa: <unsigned_integer> | <float_literal> >
+
+| <#exponent: <signed_integer> >
+
+| <#signed_integer: ( [ "+", "-" ] )? <unsigned_integer> >
+
+
+| <SQL_language_identifier: <SQL_language_identifier_start> ( <SQL_language_identifier_part>  )* >
+
+// TODO(srenei): fixit
+| <#simple_Latin_letter: ["a"-"z"]>
+| <#SQL_language_identifier_start: <simple_Latin_letter> >
+
+| <#SQL_language_identifier_part: <simple_Latin_letter> | <digit> | "_" >
+}
+
+<DEFAULT>TOKEN:
+{
+  <illegal_input_char: ~[]> : DEFAULT
+}

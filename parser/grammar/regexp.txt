@@ -1,0 +1,112 @@
+// Used in SIMILAR etc. For now, we call it unsupported.
+void regular_expression() #Unsupported:
+{}
+{
+    regular_term() ( "|" regular_term() )*
+}
+
+void regular_term():
+{}
+{
+    ( regular_factor() )+
+}
+
+void regular_factor():
+{}
+{
+    regular_primary()
+    (  "*"
+    |  "+"
+    |  "?"
+    |  repeat_factor()
+    )
+}
+
+void repeat_factor():
+{}
+{
+     "(" low_value() [ upper_limit() ] ")"
+}
+
+void upper_limit():
+{}
+{
+     "," [ high_value() ]
+}
+
+void low_value():
+{}
+{
+    <unsigned_integer>
+}
+
+void high_value():
+{}
+{
+    <unsigned_integer>
+}
+
+void regular_primary():
+{}
+{
+    character_specifier()
+  | "%"
+  | regular_character_set()
+  | "(" regular_expression() ")"
+}
+
+void character_specifier():
+{}
+{
+   // TODO(kaikalur)
+    //non_escaped_character()
+  //| escaped_character()
+  character_string_literal() // temp
+}
+
+/*
+void non_escaped_character():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void escaped_character():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+*/
+
+void regular_character_set():
+{}
+{
+     "_"
+  | "[" ( character_enumeration() )+ "]"
+  | "[" "^" ( character_enumeration() )+ "]"
+  | "[" ( character_enumeration_include() )+
+     "^" ( character_enumeration_exclude() )+ "]"
+}
+
+void character_enumeration_include():
+{}
+{
+    character_enumeration()
+}
+
+void character_enumeration_exclude():
+{}
+{
+    character_enumeration()
+}
+
+void character_enumeration():
+{}
+{
+    character_specifier()
+  | character_specifier() "-" character_specifier()
+  | "[" ":" identifier() ":" "]"
+}
+
