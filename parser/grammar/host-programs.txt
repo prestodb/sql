@@ -1,0 +1,1348 @@
+void free_locator_statement():
+{}
+{
+    "FREE" "LOCATOR" locator_reference() ( "," locator_reference() )* 
+}
+
+void locator_reference():
+{}
+{
+    host_parameter_name()
+  | embedded_variable_name()
+  | "?"
+}
+
+void hold_locator_statement():
+{}
+{
+    "HOLD" "LOCATOR" locator_reference() ( "," locator_reference() )* 
+}
+
+void host_parameter_specification():
+{}
+{
+    host_parameter_name() [ indicator_parameter() ]
+}
+
+void embedded_variable_specification():
+{}
+{
+    embedded_variable_name() [ indicator_variable() ]
+}
+
+void indicator_variable():
+{}
+{
+    [ "INDICATOR" ] embedded_variable_name()
+}
+
+void indicator_parameter():
+{}
+{
+    [ "INDICATOR" ] host_parameter_name()
+}
+
+void embedded_SQL_host_program():
+{}
+{
+    embedded_SQL_Ada_program()
+  | embedded_SQL_C_program()
+  | embedded_SQL_COBOL_program()
+  | embedded_SQL_Fortran_program()
+  | embedded_SQL_MUMPS_program()
+  | embedded_SQL_Pascal_program()
+  | embedded_SQL_PL_I_program()
+}
+
+void embedded_SQL_statement():
+{}
+{
+    SQL_prefix() statement_or_declaration() [ SQL_terminator() ]
+}
+
+void statement_or_declaration():
+{}
+{
+    declare_cursor()
+  | dynamic_declare_cursor()
+  | temporary_table_declaration()
+  | embedded_authorization_declaration()
+  | embedded_path_specification()
+  | embedded_transform_group_specification()
+  | embedded_collation_specification()
+  | embedded_exception_declaration()
+  | SQL_procedure_statement()
+}
+
+void SQL_prefix():
+{}
+{
+    "EXEC" "SQL"
+  | "&" "SQL" "(" 
+}
+
+void SQL_terminator():
+{}
+{
+    "END-EXEC"
+  | ";" 
+  | ")" 
+}
+
+void embedded_authorization_declaration():
+{}
+{
+    "DECLARE" embedded_authorization_clause()
+}
+
+void embedded_authorization_clause():
+{}
+{
+    "SCHEMA" schema_name()
+  | "AUTHORIZATION" embedded_authorization_identifier()
+    [ "FOR" "STATIC" ( "ONLY" | "AND" "DYNAMIC" ) ]
+  | "SCHEMA" schema_name() "AUTHORIZATION" embedded_authorization_identifier()
+    [ "FOR" "STATIC" ( "ONLY" | "AND" "DYNAMIC" ) ]
+}
+
+void embedded_authorization_identifier():
+{}
+{
+    identifier()
+}
+
+void embedded_path_specification():
+{}
+{
+    path_specification()
+}
+
+void embedded_transform_group_specification():
+{}
+{
+    transform_group_specification()
+}
+
+void embedded_collation_specification():
+{}
+{
+    module_collations()
+}
+
+void embedded_SQL_declare_section():
+{}
+{
+    embedded_SQL_begin_declare()
+    [ embedded_character_set_declaration() ]
+     ( host_variable_definition() )* 
+    embedded_SQL_end_declare()
+  | embedded_SQL_MUMPS_declare()
+}
+
+void embedded_character_set_declaration():
+{}
+{
+    "SQL" "NAMES" "ARE" character_set_specification()
+}
+
+void embedded_SQL_begin_declare():
+{}
+{
+    SQL_prefix() "BEGIN" "DECLARE" "SECTION" [ SQL_terminator() ]
+}
+
+void embedded_SQL_end_declare():
+{}
+{
+    SQL_prefix() "END" "DECLARE" "SECTION" [ SQL_terminator() ]
+}
+
+void embedded_SQL_MUMPS_declare():
+{}
+{
+    SQL_prefix()
+    "BEGIN" "DECLARE" "SECTION"
+    [ embedded_character_set_declaration() ]
+     ( host_variable_definition() )* 
+    "END" "DECLARE" "SECTION"
+    SQL_terminator()
+}
+
+void host_variable_definition():
+{}
+{
+    Ada_variable_definition()
+  | C_variable_definition()
+  | COBOL_variable_definition()
+  | Fortran_variable_definition()
+  | MUMPS_variable_definition()
+  | Pascal_variable_definition()
+  | PL_I_variable_definition()
+}
+
+void embedded_variable_name():
+{}
+{
+     ":" host_identifier()
+}
+
+void host_identifier():
+{}
+{
+    Ada_host_identifier()
+  | C_host_identifier()
+  | COBOL_host_identifier()
+  | Fortran_host_identifier()
+  | MUMPS_host_identifier()
+  | Pascal_host_identifier()
+  | PL_I_host_identifier()
+}
+
+void embedded_exception_declaration():
+{}
+{
+    "WHENEVER" condition() condition_action()
+}
+
+void condition():
+{}
+{
+    SQL_condition()
+}
+
+void SQL_condition():
+{}
+{
+    major_category()
+  | "SQLSTATE" ( SQLSTATE_class_value() [ "," SQLSTATE_subclass_value() ] )
+  | "CONSTRAINT" schema_qualified_name()
+}
+
+void major_category():
+{}
+{
+    "SQLEXCEPTION"
+  | "SQLWARNING"
+  | "NOT" "FOUND"
+}
+
+void SQLSTATE_class_value():
+{}
+{
+    SQLSTATE_char() SQLSTATE_char() //!! See the Syntax Rules.
+}
+
+void SQLSTATE_subclass_value():
+{}
+{
+    SQLSTATE_char() SQLSTATE_char() SQLSTATE_char() //!! See the Syntax Rules.
+}
+
+void SQLSTATE_char():
+{}
+{
+    character_string_literal() //TODO(kaikalur) fixit <simple_Latin_upper_case_letter>
+  | unsigned_literal()
+}
+
+void condition_action():
+{}
+{
+    "CONTINUE"
+  | go_to()
+}
+
+void go_to():
+{}
+{
+    ( "GOTO" | "GO" "TO" ) goto_target()
+}
+
+void goto_target():
+{}
+{
+    host_label_identifier()
+  | <unsigned_integer>
+  | host_PL_I_label_variable()
+}
+
+void host_label_identifier():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void host_PL_I_label_variable():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void embedded_SQL_Ada_program():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void Ada_variable_definition():
+{}
+{
+    Ada_host_identifier() ( "," Ada_host_identifier() )* ":" 
+    Ada_type_specification() [ Ada_initial_value() ]
+}
+
+void Ada_initial_value():
+{}
+{
+    // TODO(kaikalur): fixit -- Ada_assignment_operator() ( <character_representation> )+
+    Ada_assignment_operator() 
+}
+
+void Ada_assignment_operator():
+{}
+{
+     ":" "=" 
+}
+
+void Ada_host_identifier():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void Ada_type_specification():
+{}
+{
+    Ada_qualified_type_specification()
+  | Ada_unqualified_type_specification()
+  | Ada_derived_type_specification()
+}
+
+void Ada_qualified_type_specification():
+{}
+{
+// TODO(kaikalur)
+/*
+    Interfaces."SQL"."CHAR"
+    [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+     "(" 1  ".." character_length() ")" 
+  | Interfaces."SQL"."SMALLINT"
+  | Interfaces."SQL"."INT"
+  | Interfaces."SQL"."BIGINT"
+  | Interfaces."SQL"."REAL"
+  | Interfaces."SQL"."DOUBLE_PRECISION"
+  | Interfaces."SQL"."BOOLEAN"
+  | Interfaces."SQL"."SQLSTATE_TYPE"
+  | Interfaces."SQL"."INDICATOR_TYPE"
+*/
+    character_string_literal() // temp
+}
+
+void Ada_unqualified_type_specification():
+{}
+{
+// TODO(kaikalur)
+/*
+    "CHAR" "(" 1  ".." character_length() ")" 
+  | "SMALLINT"
+  | "INT"
+  | "BIGINT"
+  | "REAL"
+  | "DOUBLE_PRECISION"
+  | "BOOLEAN"
+  | "SQLSTATE_TYPE"
+  | "INDICATOR_TYPE"
+*/
+    character_string_literal() // temp
+}
+
+void Ada_derived_type_specification():
+{}
+{
+// TODO(kaikalur)
+/*
+    Ada_CLOB_variable()
+  | Ada_CLOB_locator_variable()
+  | Ada_BINARY_variable()
+  | Ada_VARBINARY_variable()
+  | Ada_BLOB_variable()
+  | Ada_BLOB_locator_variable()
+  | Ada_user_defined_type_variable()
+  | Ada_user_defined_type_locator_variable()
+  | Ada_REF_variable()
+  | Ada_array_locator_variable()
+  | Ada_multiset_locator_variable()
+*/
+    character_string_literal() // temp
+}
+
+void Ada_CLOB_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "CLOB" "(" character_large_object_length() ")" 
+    [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+}
+
+void Ada_CLOB_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "CLOB" "AS" "LOCATOR"
+}
+
+void Ada_BINARY_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "BINARY" "(" <unsigned_integer> ")" 
+}
+
+void Ada_VARBINARY_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "VARBINARY" "(" <unsigned_integer> ")" 
+}
+
+void Ada_BLOB_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "BLOB" "(" large_object_length() ")" 
+}
+
+void Ada_BLOB_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "BLOB" "AS" "LOCATOR"
+}
+
+void Ada_user_defined_type_variable():
+{}
+{
+    "SQL" "TYPE" "IS" path_resolved_user_defined_type_name() "AS" predefined_type()
+}
+
+void Ada_user_defined_type_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" path_resolved_user_defined_type_name() "AS" "LOCATOR"
+}
+
+void Ada_REF_variable():
+{}
+{
+    "SQL" "TYPE" "IS" reference_type()
+}
+
+void Ada_array_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" array_type() "AS" "LOCATOR"
+}
+
+void Ada_multiset_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" multiset_type() "AS" "LOCATOR"
+}
+
+void embedded_SQL_C_program():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void C_variable_definition():
+{}
+{
+    [ C_storage_class() ] [ C_class_modifier() ]
+    C_variable_specification() ";" 
+}
+
+void C_variable_specification():
+{}
+{
+    C_numeric_variable()
+  | C_character_variable()
+  | C_derived_variable()
+}
+
+void C_storage_class():
+{}
+{
+    "auto"
+  | "extern"
+  | "static"
+}
+
+void C_class_modifier():
+{}
+{
+    "const"
+  | "volatile"
+}
+
+void C_numeric_variable():
+{}
+{
+    ( "long" "long" | "long" | "short" | "float" | "double" )
+    C_host_identifier() [ C_initial_value() ]
+     ( "," C_host_identifier() [ C_initial_value() ] )* 
+}
+
+void C_character_variable():
+{}
+{
+    C_character_type() [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+    C_host_identifier() C_array_specification() [ C_initial_value() ]
+     ( "," C_host_identifier() C_array_specification()
+    [ C_initial_value() ] )* 
+}
+
+void C_character_type():
+{}
+{
+    "char"
+  | "unsigned" "char"
+  | "unsigned" "short"
+}
+
+void C_array_specification():
+{}
+{
+     "[" character_length() "]" 
+}
+
+void C_host_identifier():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void C_derived_variable():
+{}
+{
+    C_VARCHAR_variable()
+  | C_NCHAR_variable()
+  | C_NCHAR_VARYING_variable()
+  | C_CLOB_variable()
+  | C_NCLOB_variable()
+  | C_BINARY_variable()
+  | C_VARBINARY_variable()
+  | C_BLOB_variable()
+  | C_user_defined_type_variable()
+  | C_CLOB_locator_variable()
+  | C_BLOB_locator_variable()
+  | C_array_locator_variable()
+  | C_multiset_locator_variable()
+  | C_user_defined_type_locator_variable()
+  | C_REF_variable()
+}
+
+void C_VARCHAR_variable():
+{}
+{
+    "VARCHAR" [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+    C_host_identifier() C_array_specification() [ C_initial_value() ]
+     ( "," C_host_identifier() C_array_specification() [
+    C_initial_value() ] )* 
+}
+
+void C_NCHAR_variable():
+{}
+{
+    "NCHAR" [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+    C_host_identifier() C_array_specification() [ C_initial_value() ]
+     ( "," C_host_identifier() C_array_specification()
+    [ C_initial_value() ] )* 
+}
+
+void C_NCHAR_VARYING_variable():
+{}
+{
+    "NCHAR" "VARYING" [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+    C_host_identifier() C_array_specification() [ C_initial_value() ]
+     ( "," C_host_identifier() C_array_specification() [
+    C_initial_value() ] )* 
+}
+
+void C_CLOB_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "CLOB" "(" character_large_object_length() ")" 
+    [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+    C_host_identifier() [ C_initial_value() ] ( "," C_host_identifier() [
+    C_initial_value() ] )* 
+}
+
+void C_NCLOB_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "NCLOB" "(" character_large_object_length() ")" 
+    [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+    C_host_identifier() [ C_initial_value() ] ( "," C_host_identifier()
+    [ C_initial_value() ] )* 
+}
+
+void C_user_defined_type_variable():
+{}
+{
+    "SQL" "TYPE" "IS" path_resolved_user_defined_type_name() "AS" predefined_type()
+    C_host_identifier() [ C_initial_value() ]
+     ( "," C_host_identifier() [
+    C_initial_value() ] )* 
+}
+
+void C_BINARY_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "BINARY" "(" <unsigned_integer> ")" 
+    C_host_identifier() [ C_initial_value() ]
+     ( "," C_host_identifier() [ C_initial_value() ] )* 
+}
+
+void C_VARBINARY_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "VARBINARY" "(" <unsigned_integer> ")" 
+    C_host_identifier() [ C_initial_value() ]
+     ( "," C_host_identifier() [ C_initial_value() ] )* 
+}
+
+void C_BLOB_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "BLOB" "(" large_object_length() ")" 
+    C_host_identifier() [ C_initial_value() ]
+     ( "," C_host_identifier() [
+    C_initial_value() ] )* 
+}
+
+void C_CLOB_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "CLOB" "AS" "LOCATOR"
+    C_host_identifier() [ C_initial_value() ]
+     ( "," C_host_identifier() [
+    C_initial_value() ] )* 
+}
+
+void C_BLOB_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "BLOB" "AS" "LOCATOR"
+    C_host_identifier() [ C_initial_value() ]
+     ( "," C_host_identifier() [
+    C_initial_value() ] )* 
+}
+
+void C_array_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" array_type() "AS" "LOCATOR"
+    C_host_identifier() [ C_initial_value() ]
+     ( "," C_host_identifier() [
+    C_initial_value() ] )* 
+}
+
+void C_multiset_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" multiset_type() "AS" "LOCATOR"
+    C_host_identifier() [ C_initial_value() ]
+     ( "," C_host_identifier() [
+    C_initial_value() ] )* 
+}
+
+void C_user_defined_type_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" path_resolved_user_defined_type_name() "AS" "LOCATOR"
+    C_host_identifier() [ C_initial_value() ]
+     ( "," C_host_identifier() [
+    C_initial_value() ] )* 
+}
+
+void C_REF_variable():
+{}
+{
+    "SQL" "TYPE" "IS" reference_type() C_host_identifier() [ C_initial_value() ]
+     ( "," C_host_identifier() [ C_initial_value() ] )* 
+}
+
+void C_initial_value():
+{}
+{
+     // TODO(kaikalur): fixit -- "=" ( <character_representation> )+
+     "=" 
+}
+
+void embedded_SQL_COBOL_program():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void COBOL_variable_definition():
+{}
+{
+    // TODO(kaikalur): fixit --( "01" | "77" ) COBOL_host_identifier() COBOL_type_specification() ( <character_representation> )* "." 
+    ( "01" | "77" ) COBOL_host_identifier() COBOL_type_specification() 
+}
+
+void COBOL_host_identifier():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void COBOL_type_specification():
+{}
+{
+    COBOL_character_type()
+  | COBOL_national_character_type()
+  | COBOL_numeric_type()
+  | COBOL_integer_type()
+  | COBOL_derived_type_specification()
+}
+
+void COBOL_derived_type_specification():
+{}
+{
+    COBOL_CLOB_variable()
+  | COBOL_NCLOB_variable()
+  | COBOL_BINARY_variable()
+  | COBOL_BLOB_variable()
+  | COBOL_user_defined_type_variable()
+  | COBOL_CLOB_locator_variable()
+  | COBOL_BLOB_locator_variable()
+  | COBOL_array_locator_variable()
+  | COBOL_multiset_locator_variable()
+  | COBOL_user_defined_type_locator_variable()
+  | COBOL_REF_variable()
+}
+
+void COBOL_character_type():
+{}
+{
+    [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+    ( "PIC" | "PICTURE" ) [ "IS" ] ( "X" [ "(" character_length() ")" ] )+
+}
+
+void COBOL_national_character_type():
+{}
+{
+    [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+    ( "PIC" | "PICTURE" ) [ "IS" ] ( "N" [ "(" character_length() ")" ] )+
+}
+
+void COBOL_CLOB_variable():
+{}
+{
+    [ "USAGE" [ "IS" ] ] "SQL" "TYPE" "IS" "CLOB" "(" character_large_object_length() ")"
+    [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+}
+
+void COBOL_NCLOB_variable():
+{}
+{
+    [ "USAGE" [ "IS" ] ] "SQL" "TYPE" "IS" "NCLOB" "(" character_large_object_length() ")"
+    [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+}
+
+void COBOL_BINARY_variable():
+{}
+{
+    [ "USAGE" [ "IS" ] ] "SQL" "TYPE" "IS" "BINARY" "(" <unsigned_integer> ")" 
+}
+
+void COBOL_BLOB_variable():
+{}
+{
+    [ "USAGE" [ "IS" ] ] "SQL" "TYPE" "IS" "BLOB" "(" large_object_length() ")" 
+}
+
+void COBOL_user_defined_type_variable():
+{}
+{
+    [ "USAGE" [ "IS" ] ] "SQL" "TYPE" "IS" path_resolved_user_defined_type_name()
+    "AS" predefined_type()
+}
+
+void COBOL_CLOB_locator_variable():
+{}
+{
+    [ "USAGE" [ "IS" ] ] "SQL" "TYPE" "IS" "CLOB" "AS" "LOCATOR"
+}
+
+void COBOL_BLOB_locator_variable():
+{}
+{
+    [ "USAGE" [ "IS" ] ] "SQL" "TYPE" "IS" "BLOB" "AS" "LOCATOR"
+}
+
+void COBOL_array_locator_variable():
+{}
+{
+    [ "USAGE" [ "IS" ] ] "SQL" "TYPE" "IS" array_type() "AS" "LOCATOR"
+}
+
+void COBOL_multiset_locator_variable():
+{}
+{
+    [ "USAGE" [ "IS" ] ] "SQL" "TYPE" "IS" multiset_type() "AS" "LOCATOR"
+}
+
+void COBOL_user_defined_type_locator_variable():
+{}
+{
+    [ "USAGE" [ "IS" ] ] "SQL" "TYPE" "IS" path_resolved_user_defined_type_name() "AS" "LOCATOR"
+}
+
+void COBOL_REF_variable():
+{}
+{
+    [ "USAGE" [ "IS" ] ] "SQL" "TYPE" "IS" reference_type()
+}
+
+void COBOL_numeric_type():
+{}
+{
+    ( "PIC" | "PICTURE" ) [ "IS" ] "S" COBOL_nines_specification()
+    [ "USAGE" [ "IS" ] ] "DISPLAY" "SIGN" "LEADING" "SEPARATE"
+}
+
+void COBOL_nines_specification():
+{}
+{
+    COBOL_nines() [ "V" [ COBOL_nines() ] ]
+  | "V" COBOL_nines()
+}
+
+void COBOL_integer_type():
+{}
+{
+    COBOL_binary_integer()
+}
+
+void COBOL_binary_integer():
+{}
+{
+    ( "PIC" | "PICTURE" ) [ "IS" ] "S"COBOL_nines()
+    [ "USAGE" [ "IS" ] ] "BINARY"
+}
+
+void COBOL_nines():
+{}
+{
+    ( "9" [ "(" <unsigned_integer> ")" ] )+
+}
+
+void embedded_SQL_Fortran_program():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void Fortran_variable_definition():
+{}
+{
+    Fortran_type_specification() Fortran_host_identifier()
+     ( "," Fortran_host_identifier() )* 
+}
+
+void Fortran_host_identifier():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void Fortran_type_specification():
+{}
+{
+/*** TODO(kaikalur)
+    "CHARACTER" [ "*" character_length() ] [ "CHARACTER" "SET"
+    [ "IS" ] character_set_specification() ]
+  | "CHARACTER" "KIND" = n [ "*" character_length() ]
+    [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+  | "INTEGER"
+  | "REAL"
+  | "DOUBLE" "PRECISION"
+  | "LOGICAL"
+  | Fortran_derived_type_specification()
+*/
+    character_string_literal() // temp
+}
+
+void Fortran_derived_type_specification():
+{}
+{
+    Fortran_CLOB_variable()
+  | Fortran_BINARY_variable()
+  | Fortran_VARBINARY_variable()
+  | Fortran_BLOB_variable()
+  | Fortran_user_defined_type_variable()
+  | Fortran_CLOB_locator_variable()
+  | Fortran_BLOB_locator_variable()
+  | Fortran_user_defined_type_locator_variable()
+  | Fortran_array_locator_variable()
+  | Fortran_multiset_locator_variable()
+  | Fortran_REF_variable()
+}
+
+void Fortran_CLOB_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "CLOB" "(" character_large_object_length() ")" 
+    [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+}
+
+void Fortran_BINARY_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "BINARY" "(" <unsigned_integer> ")" 
+}
+
+void Fortran_VARBINARY_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "VARBINARY" "(" <unsigned_integer> ")" 
+}
+
+void Fortran_BLOB_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "BLOB" "(" large_object_length() ")" 
+}
+
+void Fortran_user_defined_type_variable():
+{}
+{
+    "SQL" "TYPE" "IS" path_resolved_user_defined_type_name() "AS" predefined_type()
+}
+
+void Fortran_CLOB_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "CLOB" "AS" "LOCATOR"
+}
+
+void Fortran_BLOB_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "BLOB" "AS" "LOCATOR"
+}
+
+void Fortran_user_defined_type_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" path_resolved_user_defined_type_name() "AS" "LOCATOR"
+}
+
+void Fortran_array_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" array_type() "AS" "LOCATOR"
+}
+
+void Fortran_multiset_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" multiset_type() "AS" "LOCATOR"
+}
+
+void Fortran_REF_variable():
+{}
+{
+    "SQL" "TYPE" "IS" reference_type()
+}
+
+void embedded_SQL_MUMPS_program():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void MUMPS_variable_definition():
+{}
+{
+    MUMPS_numeric_variable() ";" 
+  | MUMPS_character_variable() ";" 
+  | MUMPS_derived_type_specification() ";" 
+}
+
+void MUMPS_character_variable():
+{}
+{
+    "VARCHAR" MUMPS_host_identifier() MUMPS_length_specification()
+    [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+     ( "," MUMPS_host_identifier() MUMPS_length_specification()
+    [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ] )* 
+}
+
+void MUMPS_host_identifier():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void MUMPS_length_specification():
+{}
+{
+     "(" character_length() ")" 
+}
+
+void MUMPS_numeric_variable():
+{}
+{
+    MUMPS_type_specification() MUMPS_host_identifier()
+     ( "," MUMPS_host_identifier() )* 
+}
+
+void MUMPS_type_specification():
+{}
+{
+    "INT"
+  | "DEC" [ "(" <unsigned_integer> [ "," <unsigned_integer> ] ")" ]
+  | "REAL"
+}
+
+void MUMPS_derived_type_specification():
+{}
+{
+    MUMPS_CLOB_variable()
+  | MUMPS_VARBINARY_variable()
+  | MUMPS_BLOB_variable()
+  | MUMPS_user_defined_type_variable()
+  | MUMPS_CLOB_locator_variable()
+  | MUMPS_BLOB_locator_variable()
+  | MUMPS_user_defined_type_locator_variable()
+  | MUMPS_array_locator_variable()
+  | MUMPS_multiset_locator_variable()
+  | MUMPS_REF_variable()
+}
+
+void MUMPS_CLOB_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "CLOB" "(" character_large_object_length() ")" 
+    [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+}
+
+void MUMPS_VARBINARY_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "VARBINARY" "(" <unsigned_integer> ")" 
+}
+
+void MUMPS_BLOB_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "BLOB" "(" large_object_length() ")" 
+}
+
+void MUMPS_user_defined_type_variable():
+{}
+{
+    "SQL" "TYPE" "IS" path_resolved_user_defined_type_name() "AS" predefined_type()
+}
+
+void MUMPS_CLOB_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "CLOB" "AS" "LOCATOR"
+}
+
+void MUMPS_BLOB_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "BLOB" "AS" "LOCATOR"
+}
+
+void MUMPS_user_defined_type_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" path_resolved_user_defined_type_name() "AS" "LOCATOR"
+}
+
+void MUMPS_array_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" array_type() "AS" "LOCATOR"
+}
+
+void MUMPS_multiset_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" multiset_type() "AS" "LOCATOR"
+}
+
+void MUMPS_REF_variable():
+{}
+{
+    "SQL" "TYPE" "IS" reference_type()
+}
+
+void embedded_SQL_Pascal_program():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void Pascal_variable_definition():
+{}
+{
+    Pascal_host_identifier() ( "," Pascal_host_identifier() )* ":" 
+    Pascal_type_specification() ";" 
+}
+
+void Pascal_host_identifier():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void Pascal_type_specification():
+{}
+{
+/*** TODO(kaikalur)
+    "PACKED" "ARRAY" "[" 1  ".." character_length() "]" 
+    "OF" "CHAR" [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+  | "INTEGER"
+  | "REAL"
+  | "CHAR" [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+  | "BOOLEAN"
+  | Pascal_derived_type_specification()
+*/
+    character_string_literal() // temp
+}
+
+void Pascal_derived_type_specification():
+{}
+{
+    Pascal_CLOB_variable()
+  | Pascal_BINARY_variable()
+  | Pascal_BLOB_variable()
+  | Pascal_user_defined_type_variable()
+  | Pascal_CLOB_locator_variable()
+  | Pascal_BLOB_locator_variable()
+  | Pascal_user_defined_type_locator_variable()
+  | Pascal_array_locator_variable()
+  | Pascal_multiset_locator_variable()
+  | Pascal_REF_variable()
+}
+
+void Pascal_CLOB_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "CLOB" "(" character_large_object_length() ")" 
+    [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+}
+
+void Pascal_BINARY_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "BINARY" "(" <unsigned_integer> ")" 
+}
+
+void Pascal_BLOB_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "BLOB" "(" large_object_length() ")" 
+}
+
+void Pascal_CLOB_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "CLOB" "AS" "LOCATOR"
+}
+
+void Pascal_user_defined_type_variable():
+{}
+{
+    "SQL" "TYPE" "IS" path_resolved_user_defined_type_name() "AS" predefined_type()
+}
+
+void Pascal_BLOB_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "BLOB" "AS" "LOCATOR"
+}
+
+void Pascal_user_defined_type_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" path_resolved_user_defined_type_name() "AS" "LOCATOR"
+}
+
+void Pascal_array_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" array_type() "AS" "LOCATOR"
+}
+
+void Pascal_multiset_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" multiset_type() "AS" "LOCATOR"
+}
+
+void Pascal_REF_variable():
+{}
+{
+    "SQL" "TYPE" "IS" reference_type()
+}
+
+void embedded_SQL_PL_I_program():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void PL_I_variable_definition():
+{}
+{
+//TODO(kaikalur): fixit
+/*
+    ( "DCL" | "DECLARE" ) PL_I_type_specification() ( <character_representation> )* ";" 
+  | ( PL_I_host_identifier() | "(" PL_I_host_identifier()
+     ( "," PL_I_host_identifier() )* ")" )
+    PL_I_type_specification() ( <character_representation> )* ";" 
+*/ 
+"PL/I"
+}
+
+void PL_I_host_identifier():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void PL_I_type_specification():
+{}
+{
+    ( "CHAR" | "CHARACTER" ) [ "VARYING" ] "(" character_length() ")" 
+    [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+  | PL_I_type_fixed_decimal() "(" <unsigned_integer> [ "," <unsigned_integer> ] ")" 
+  | PL_I_type_fixed_binary() [ "(" <unsigned_integer> ")" ]
+  | PL_I_type_float_binary() "(" <unsigned_integer> ")" 
+  | PL_I_derived_type_specification()
+}
+
+void PL_I_derived_type_specification():
+{}
+{
+    PL_I_CLOB_variable()
+  | PL_I_BINARY_variable()
+  | PL_I_VARBINARY_variable()
+  | PL_I_BLOB_variable()
+  | PL_I_user_defined_type_variable()
+  | PL_I_CLOB_locator_variable()
+  | PL_I_BLOB_locator_variable()
+  | PL_I_user_defined_type_locator_variable()
+  | PL_I_array_locator_variable()
+  | PL_I_multiset_locator_variable()
+  | PL_I_REF_variable()
+}
+
+void PL_I_CLOB_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "CLOB" "(" character_large_object_length() ")" 
+    [ "CHARACTER" "SET" [ "IS" ] character_set_specification() ]
+}
+
+void PL_I_BINARY_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "BINARY" "(" <unsigned_integer> ")" 
+}
+
+void PL_I_VARBINARY_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "VARBINARY" "(" <unsigned_integer> ")" 
+}
+
+void PL_I_BLOB_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "BLOB" "(" large_object_length() ")" 
+}
+
+void PL_I_user_defined_type_variable():
+{}
+{
+    "SQL" "TYPE" "IS" path_resolved_user_defined_type_name() "AS" predefined_type()
+}
+
+void PL_I_CLOB_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "CLOB" "AS" "LOCATOR"
+}
+
+void PL_I_BLOB_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" "BLOB" "AS" "LOCATOR"
+}
+
+void PL_I_user_defined_type_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" path_resolved_user_defined_type_name() "AS" "LOCATOR"
+}
+
+void PL_I_array_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" array_type() "AS" "LOCATOR"
+}
+
+void PL_I_multiset_locator_variable():
+{}
+{
+    "SQL" "TYPE" "IS" multiset_type() "AS" "LOCATOR"
+}
+
+void PL_I_REF_variable():
+{}
+{
+    "SQL" "TYPE" "IS" reference_type()
+}
+
+void PL_I_type_fixed_decimal():
+{}
+{
+    ( "DEC" | "DECIMAL" ) "FIXED"
+  | "FIXED" ( "DEC" | "DECIMAL" )
+}
+
+void PL_I_type_fixed_binary():
+{}
+{
+    ( "BIN" | "BINARY" ) "FIXED"
+  | "FIXED" ( "BIN" | "BINARY" )
+}
+
+void PL_I_type_float_binary():
+{}
+{
+    ( "BIN" | "BINARY" ) "FLOAT"
+  | "FLOAT" ( "BIN" | "BINARY" )
+}
+
