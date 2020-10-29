@@ -1,0 +1,17 @@
+Here are some notes that explain the reason for some of the non-standard looking changes made in the grammar. Most of these are to facilitate building AST in the correcto form.
+
+JJTree:
+------
+
+* For things like:
+    int ARRAY[10]
+  that are suffxies on other valid entities - ARRAY[10] is a suffix for a valid basic type 'int' -  we need to pop the node for
+  the the int that's already on the stack first before making the tree for the array.
+
+* #Unsupported is used to build special AST node of kind Unsupported so we can have the full grammar in the source and handle unsupported features gracefully.
+
+
+Javacc:
+------
+
+* a -> b is potentially ambiguous as SQL allows pointer like member access using -> which conflicts with Presto lambda. we need to 
