@@ -1,0 +1,162 @@
+options {
+  STATIC = false;
+  OUTPUT_LANGUAGE = "c++";
+  NAMESPACE = "commonsql::parser";
+  //OUTPUT_DIRECTORY = "target";
+  LOOKAHEAD=3;
+  IGNORE_CASE=true;
+  UNICODE_INPUT=true;
+  //DEBUG_TOKEN_MANAGER=true;
+  //DEBUG_PARSER=true;
+  //DEBUG_LOOKAHEAD=true;
+  PARSER_INCLUDE="parser.h";
+  ERROR_REPORTING=false;
+
+  NODE_DEFAULT_VOID = true;
+  NODE_SCOPE_HOOK = true;
+  NODE_CLASS = "AstNode";
+  NODE_PREFIX = "";
+  MULTI = true;
+  VISITOR = true;
+}
+
+PARSER_BEGIN(SqlParser)
+
+  inline bool IsIdNonReservedWord() {
+    auto kind = getToken(1)->kind;
+    if (__builtin_expect(kind == regular_identifier, 1) || kind == delimited_identifier || kind == Unicode_delimited_identifier) return true;
+
+    if (!(kind >= MIN_NON_RESERVED_WORD && kind <= MAX_NON_RESERVED_WORD)) return false;  // Not a nonreserved word.
+
+    // Some special cases.
+    switch (kind) {
+      // Some contextual keywords
+      case GROUP:
+      case ORDER:
+      case PARTITION:
+        return getToken(2)->kind != BY;
+
+      case LIMIT:
+        return getToken(2)->kind != unsigned_integer;
+
+      case ROWS:
+        return getToken(2)->kind != BETWEEN;
+
+      // Some builtin functions
+      case TRIM:
+      case POSITION:
+      case MOD:
+      case POWER:
+      case RANK:
+      case ROW_NUMBER:
+      case FLOOR:
+      case MIN:
+      case MAX:
+      case UPPER:
+      case LOWER:
+      case CARDINALITY:
+      case ABS:
+        return getToken(2)->kind != lparen;
+
+      default:
+        return true;
+     }
+
+     // Should never come here.
+     return true;
+  }
+
+  inline bool SyncToSemicolon() {
+    if (hasError || getToken(0)->kind != semicolon) {
+      while (getToken(1)->kind != _EOF && getToken(1)->kind != semicolon) {
+        getNextToken();
+      }
+
+      if (getToken(1)->kind == semicolon) {
+        getNextToken();
+      }
+
+      hasError = false;
+    }
+
+    return true;
+  }
+
+  inline bool NotEof() {
+    return getToken(1)->kind != _EOF;
+  }
+
+  void PushNode(Node* node) { jjtree.pushNode(node); }
+  Node* PopNode() { return jjtree.popNode(); }
+
+  void jjtreeOpenNodeScope(Node* node) {
+    static_cast<AstNode*>(node)->beginToken = getToken(1);
+  }
+
+  void jjtreeCloseNodeScope(Node* node) {
+    AstNode* astNode = static_cast<AstNode*>(node);
+    astNode->endToken = getToken(0);
+    Token* t = astNode->beginToken;
+
+    // For some nodes, the node is opened after some children are already created. Reset the begin for those to be
+    // the begin of the left-most child.
+    if (astNode->NumChildren() > 0) {
+      Token* t0 = astNode->GetChild(0)->beginToken;
+      if (t0->beginLine < t->beginLine || (t0->beginLine == t->beginLine && t0->beginColumn < t->beginColumn)) {
+        astNode->beginToken = t0;
+      }
+    }
+
+    if (astNode->getId() == JJTUNSUPPORTED) {
+      cout << "Unsupported feature used at: " << t->beginLine << ":" << t->beginColumn << " " << t->image  << "\n";
+    }
+  }
+
+PARSER_END(SqlParser)
+
+TOKEN_MGR_DECLS:
+{
+  void setKindToIdentifier(Token *t) {
+    t->kind = regular_identifier;
+  }
+
+  void setUnicodeLiteralType(Token *t) {
+    t->kind = unicode_literal;
+  }
+
+  void StoreImage(Token* matchedToken) {
+    // TODO(sreeni): fix it.
+    // matchedToken->image = image;
+  }
+}
+
+// Temporary entry point
+Node* compilation_unit() #CompilationUnit:
+{
+    Token *begin;
+}
+{
+    ( <semicolon> )*
+    (
+    LOOKAHEAD({NotEof()})
+    { begin = getToken(1); }
+      statement_list()
+    { if (hasError) cout << "Error parsing statement at: " << begin->beginLine; }
+    { SyncToSemicolon(); }
+    )*
+    <EOF>
+
+    { if (jjtree.peekNode() != nullptr) return jjtree.peekNode(); return null; }
+}
+
+void statement_list():
+{}
+{
+    (
+    LOOKAHEAD({NotEof()})
+      direct_SQL_statement()
+      ( <semicolon> )*
+    )+
+    { SyncToSemicolon(); }
+}
+
