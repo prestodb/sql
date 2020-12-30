@@ -27,7 +27,6 @@ public class ParserHelper
             return parser.getResult();
         }
         catch (ParseException pe) {
-            pe.printStackTrace();
             return null;
         }
     }

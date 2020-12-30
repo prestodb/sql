@@ -1,0 +1,234 @@
+<UNREACHABLE>SKIP:
+{
+  // Dummy token to get a value range. Will never be mached. And it should be here positionally - before the first non reserved word
+  <MIN_RESERVED_WORD: "MIN RESERVED WORD">
+}
+
+// reserved words
+TOKEN:
+{
+    <ALLOCATE: "ALLOCATE">
+  | <ALTER: "ALTER">
+  | <AND: "AND">
+  | <ANY: "ANY">
+  | <ARE: "ARE">
+  | <ARRAY: "ARRAY">
+  | <AS: "AS">
+  | <ASENSITIVE: "ASENSITIVE">
+  | <ASYMMETRIC: "ASYMMETRIC">
+  | <ATOMIC: "ATOMIC">
+  | <AUTHORIZATION: "AUTHORIZATION">
+  | <BEGIN: "BEGIN">
+  | <BETWEEN: "BETWEEN">
+  | <BIGINT: "BIGINT">
+  | <BINARY: "BINARY">
+  | <BOOLEAN: "BOOLEAN">
+  | <BY: "BY">
+  | <CALL: "CALL">
+  | <CALLED: "CALLED">
+  | <CASCADED: "CASCADED">
+  | <CASE: "CASE">
+  | <CAST: "CAST">
+  | <CEIL: "CEIL">
+  | <CEILING: "CEILING">
+  | <CHAR: "CHAR">
+  | <CHAR_LENGTH: "CHAR_LENGTH">
+  | <CHARACTER: "CHARACTER">
+  | <CHARACTER_LENGTH: "CHARACTER_LENGTH">
+  | <CHECK: "CHECK">
+  | <CLOB: "CLOB">
+  | <COALESCE: "COALESCE">
+  | <COLLATE: "COLLATE">
+  | <COLLECT: "COLLECT">
+  | <COMMIT: "COMMIT">
+  | <CONNECT: "CONNECT">
+  | <CONSTRAINT: "CONSTRAINT">
+  | <CONVERT: "CONVERT">
+  | <CORR: "CORR">
+  | <CORRESPONDING: "CORRESPONDING">
+  | <COVAR_POP: "COVAR_POP">
+  | <COVAR_SAMP: "COVAR_SAMP">
+  | <CREATE: "CREATE">
+  | <CROSS: "CROSS">
+  | <CUME_DIST: "CUME_DIST">
+  | <DEALLOCATE: "DEALLOCATE">
+  | <DECIMAL: "DECIMAL">
+  | <DECLARE: "DECLARE">
+  | <DELETE: "DELETE">
+  | <DENSE_RANK: "DENSE_RANK">
+  | <DEREF: "DEREF">
+  | <DESCRIBE: "DESCRIBE">
+  | <DETERMINISTIC: "DETERMINISTIC">
+  | <DISCONNECT: "DISCONNECT">
+  | <DISTINCT: "DISTINCT">
+  | <DOUBLE: "DOUBLE">
+  | <DROP: "DROP">
+  | <EACH: "EACH">
+  | <ELEMENT: "ELEMENT">
+  | <ELSE: "ELSE">
+  | <END: "END">
+  | <END_EXEC: "END-EXEC">
+  | <ESCAPE: "ESCAPE">
+  | <EVERY: "EVERY">
+  | <EXCEPT: "EXCEPT">
+  | <EXEC: "EXEC">
+  | <EXECUTE: "EXECUTE">
+  | <EXISTS: "EXISTS">
+  | <EXTRACT: "EXTRACT">
+  | <FALSE: "FALSE">
+  | <FETCH: "FETCH">
+  | <FIRST_VALUE: "FIRST_VALUE">
+  | <FLOAT: "FLOAT">
+  | <FOR: "FOR">
+  | <FOREIGN: "FOREIGN">
+  | <FOREVER: "FOREVER">
+  | <FROM: "FROM">
+  | <FULL: "FULL">
+  | <FUSION: "FUSION">
+  | <GET: "GET">
+  | <GRANT: "GRANT">
+  | <GROUP: "GROUP">
+  | <GROUPING: "GROUPING">
+  | <HAVING: "HAVING">
+  | <IN: "IN">
+  | <INNER: "INNER">
+  | <INOUT: "INOUT">
+  | <INSENSITIVE: "INSENSITIVE">
+  | <INSERT: "INSERT">
+  | <INT: "INT">
+  | <INTEGER: "INTEGER">
+  | <INTERSECT: "INTERSECT">
+  | <INTO: "INTO">
+  | <IS: "IS">
+  | <JOIN: "JOIN">
+  | <KEEP: "KEEP">
+  | <LAG: "LAG">
+  | <LARGE: "LARGE">
+  | <LAST_VALUE: "LAST_VALUE">
+  | <LATERAL: "LATERAL">
+  | <LEADING: "LEADING">
+  | <LEFT: "LEFT">
+  | <LIKE: "LIKE">
+  | <LIKE_REGEX: "LIKE_REGEX">
+  | <LN: "LN">
+  | <LOCALTIME: "LOCALTIME">
+  | <LOCALTIMESTAMP: "LOCALTIMESTAMP">
+  | <MATCH: "MATCH">
+  | <MAX_CARDINALITY: "MAX_CARDINALITY">
+  | <MEMBER: "MEMBER">
+  | <MODIFIES: "MODIFIES">
+  | <MULTISET: "MULTISET">
+  | <NATIONAL: "NATIONAL">
+  | <NATURAL: "NATURAL">
+  | <NCHAR: "NCHAR">
+  | <NCLOB: "NCLOB">
+  | <NO: "NO">
+  | <NORMALIZE: "NORMALIZE">
+  | <NOT: "NOT">
+  | <NTH_VALUE: "NTH_VALUE">
+  | <NTILE: "NTILE">
+  | <NULL_: "NULL">
+  | <NULLIF: "NULLIF">
+  | <NUMERIC: "NUMERIC">
+  | <OCTET_LENGTH: "OCTET_LENGTH">
+  | <OCCURRENCES_REGEX: "OCCURRENCES_REGEX">
+  | <OF: "OF">
+  | <ON: "ON">
+  | <ONLY: "ONLY">
+  | <OR: "OR">
+  | <ORDER: "ORDER">
+  | <OUT: "OUT">
+  | <OUTER: "OUTER">
+  | <OVER: "OVER">
+  | <OVERLAPS: "OVERLAPS">
+  | <OVERLAY: "OVERLAY">
+  | <PARAMETER: "PARAMETER">
+  | <PERCENT_RANK: "PERCENT_RANK">
+  | <PERCENTILE_CONT: "PERCENTILE_CONT">
+  | <PERCENTILE_DISC: "PERCENTILE_DISC">
+  | <POSITION_REGEX: "POSITION_REGEX">
+  | <PREPARE: "PREPARE">
+  | <PRIMARY: "PRIMARY">
+  | <PROCEDURE: "PROCEDURE">
+  | <REAL: "REAL">
+  | <RECURSIVE: "RECURSIVE">
+  | <REFERENCING: "REFERENCING">
+  | <REGR_AVGX: "REGR_AVGX">
+  | <REGR_AVGY: "REGR_AVGY">
+  | <REGR_COUNT: "REGR_COUNT">
+  | <REGR_INTERCEPT: "REGR_INTERCEPT">
+  | <REGR_R2: "REGR_R2">
+  | <REGR_SLOPE: "REGR_SLOPE">
+  | <REGR_SXX: "REGR_SXX">
+  | <REGR_SXY: "REGR_SXY">
+  | <REGR_SYY: "REGR_SYY">
+  | <RETURN: "RETURN">
+  | <REVOKE: "REVOKE">
+  | <RIGHT: "RIGHT">
+  | <ROLLBACK: "ROLLBACK">
+  | <SCROLL: "SCROLL">
+  | <SELECT: "SELECT">
+  | <SENSITIVE: "SENSITIVE">
+  | <SET: "SET">
+  | <SIMILAR: "SIMILAR">
+  | <SMALLINT: "SMALLINT">
+  | <SOME: "SOME">
+  | <SPECIFIC: "SPECIFIC">
+  | <SPECIFICTYPE: "SPECIFICTYPE">
+  | <SQLEXCEPTION: "SQLEXCEPTION">
+  | <SQLSTATE: "SQLSTATE">
+  | <SQLWARNING: "SQLWARNING">
+  | <SQRT: "SQRT">
+  | <STDDEV_POP: "STDDEV_POP">
+  | <STDDEV_SAMP: "STDDEV_SAMP">
+  | <SUBMULTISET: "SUBMULTISET">
+  | <SUBSTRING: "SUBSTRING">
+  | <SUBSTRING_REGEX: "SUBSTRING_REGEX">
+  | <SYMMETRIC: "SYMMETRIC">
+  | <SYSTEM_USER: "SYSTEM_USER">
+  | <TABLE: "TABLE">
+  | <TABLESAMPLE: "TABLESAMPLE">
+  | <THEN: "THEN">
+  | <TO: "TO">
+  | <TRAILING: "TRAILING">
+  | <TRANSLATE: "TRANSLATE">
+  | <TRANSLATE_REGEX: "TRANSLATE_REGEX">
+  | <TRANSLATION: "TRANSLATION">
+  | <TREAT: "TREAT">
+  | <TRIM: "TRIM">
+  | <TRIM_ARRAY: "TRIM_ARRAY">
+  | <TRUE: "TRUE">
+  | <UESCAPE: "UESCAPE">
+  | <UNION: "UNION">
+  | <UNIQUE: "UNIQUE">
+  | <UNNEST: "UNNEST">
+  | <USING: "USING">
+  | <VAR_POP: "VAR_POP">
+  | <VAR_SAMP: "VAR_SAMP">
+  | <VARBINARY: "VARBINARY">
+  | <VARCHAR: "VARCHAR">
+  | <VARYING: "VARYING">
+  | <VERSIONING: "VERSIONING">
+  | <WHEN: "WHEN">
+  | <WHENEVER: "WHENEVER">
+  | <WHERE: "WHERE">
+  | <WIDTH_BUCKET: "WIDTH_BUCKET">
+  | <WITH: "WITH">
+  | <WITHIN: "WITHIN">
+  | <WITHOUT: "WITHOUT">
+}
+
+<UNREACHABLE>SKIP:
+{
+  // Dummy token to get a value range. Will never be mached:
+  <MAX_RESERVED_WORD: "MAX RESERVED WORD">
+}
+
+//TODO(kaikalur): create a separate section for all special chars
+TOKEN:
+{
+    <semicolon: ";">
+  | <lparen: "(">
+  | <rparen: ")">
+  | <underscore: "_">
+}

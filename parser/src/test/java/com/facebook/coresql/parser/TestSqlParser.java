@@ -41,6 +41,7 @@ public class TestSqlParser
             "SELECT\n" +
                     " CAST(MAP() AS map<bigint,array<boolean>>) AS \"bool_tensor_features\";",
             "SELECT f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f())))))))))))))))))))))))))))));",
+            "SELECT abs, 2 as abs;",
     };
 
     private AstNode parse(String sql)
