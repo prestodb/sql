@@ -99,8 +99,8 @@ public class Unparser
     public void defaultVisit(SimpleNode node, Void data)
     {
         AstNode astNode = (AstNode) node;
-        AstNode firstChild = astNode.FirstChild();
-        AstNode lastChild = astNode.LastChild();
+        AstNode firstChild = astNode.getFirstChild();
+        AstNode lastChild = astNode.getLastChild();
 
         // Print the tokens.
         if (firstChild == null || astNode.beginToken != firstChild.beginToken) {

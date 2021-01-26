@@ -11,19 +11,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.facebook.coresql.parser;
+package com.facebook.coresql.warning;
 
+import com.facebook.coresql.parser.AstNode;
 import org.testng.annotations.Test;
 
 import static com.facebook.coresql.parser.ParserHelper.parseStatement;
-import static com.facebook.coresql.parser.Unparser.unparse;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
+import static com.facebook.coresql.warning.WarningHandlingLevel.NORMAL;
+import static org.testng.Assert.assertThrows;
 
-public class TestSqlParser
+/* TODO */
+public class WarningCollectorTest
 {
-    private static final String[] testSqlTeststrings = new String[] {
+    private static final String[] nonWarningSqlStrings = new String[] {
             "SELECT (true or false) and false;",
+            "SELECT true or false or true;",
+            "SELECT true and false and false;",
+            "SELECT a FROM T WHERE a.id = 2 or (a.id = 3 and a.age = 73);",
+            "SELECT a FROM T WHERE (a.id = 2 or a.id = 3) and (a.age = 73 or a.age = 100);",
+            "SELECT * from Evaluation e JOIN Value v ON e.CaseNum = v.CaseNum\n" +
+                    "    AND e.FileNum = v.FileNum AND e.ActivityNum = v.ActivityNum;",
             "use a.b;",
             " SELECT 1;",
             "SELECT a FROM T;",
@@ -45,26 +52,27 @@ public class TestSqlParser
             "SELECT abs, 2 as abs;",
     };
 
+    private static final String[] warningSqlStrings = new String[] {
+            "SELECT true or false and false;",
+            "SELECT a FROM T WHERE a.id = 2 or a.id = 3 and a.age = 73;",
+            "SELECT a FROM T WHERE (a.id = 2 or a.id = 3) and a.age = 73 or a.age = 100;"
+    };
+
     private AstNode parse(String sql)
     {
         return parseStatement(sql);
     }
 
     @Test
-    public void smokeTest()
+    public void nullConstructorInputTest()
     {
-        for (String sql : testSqlTeststrings) {
-            assertNotNull(parse(sql));
-        }
+        assertThrows(NullPointerException.class, () -> new DefaultWarningCollector(null, NORMAL));
     }
 
     @Test
-    public void parseUnparseTest()
+    public void nullAddInputTest()
     {
-        for (String sql : testSqlTeststrings) {
-            AstNode ast = parse(sql);
-            assertNotNull(ast);
-            assertEquals(sql.trim(), unparse(ast).trim());
-        }
+        WarningCollector collector = new DefaultWarningCollector(new WarningCollectorConfig(), NORMAL);
+        assertThrows(NullPointerException.class, () -> collector.add(null));
     }
 }

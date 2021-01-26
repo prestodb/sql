@@ -29,7 +29,7 @@ public class AstNode
         super(parser, id);
     }
 
-    public int Kind()
+    public int getKind()
     {
         return id;
     }
@@ -44,30 +44,30 @@ public class AstNode
         return (AstNode) jjtGetChild(i);
     }
 
-    public String GetImage()
+    public String getImage()
     {
         return NumChildren() == 0 ? beginToken.image : null;
     }
 
-    public final void VisitNode(com.facebook.coresql.parser.SqlParserVisitor visitor)
+    public final void visit(SqlParserVisitor visitor)
     {
         jjtAccept(visitor, null);
     }
 
-    public final AstNode FirstChild()
+    public final AstNode getFirstChild()
     {
         return NumChildren() > 0 ? GetChild(0) : null;
     }
 
-    public final AstNode LastChild()
+    public final AstNode getLastChild()
     {
         return NumChildren() > 0 ? GetChild(NumChildren() - 1) : null;
     }
 
-    public final AstNode GetFirstChildOfKind(int kind)
+    public final AstNode getFirstChildOfKind(int kind)
     {
         for (int i = 0; i < NumChildren(); i++) {
-            if (GetChild(i).Kind() == kind) {
+            if (GetChild(i).getKind() == kind) {
                 return GetChild(i);
             }
         }
