@@ -11,22 +11,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.facebook.coresql.parser;
+package com.facebook.coresql.lint;
 
-import com.facebook.coresql.parser.sqllogictest.SqlLogicTest;
+import com.facebook.coresql.parser.AstNode;
+import com.facebook.coresql.warning.CoreSqlWarning;
+import com.facebook.coresql.warning.DefaultWarningCollector;
+import com.facebook.coresql.warning.WarningCollectorConfig;
 import org.testng.annotations.Test;
 
-import java.io.IOException;
+import java.util.List;
 
 import static com.facebook.coresql.parser.ParserHelper.parseStatement;
-import static com.facebook.coresql.parser.Unparser.unparse;
+import static com.facebook.coresql.warning.WarningHandlingLevel.NORMAL;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
 
-public class TestSqlParser
+public class TestMixedAndOr
 {
-    private static final String[] testSqlTeststrings = new String[] {
+    private static final LintingVisitor lintingVisitor = new MixedAndOr(new DefaultWarningCollector(new WarningCollectorConfig(), NORMAL));
+    private static final String[] nonWarningSqlStrings = new String[] {
             "SELECT (true or false) and false;",
+            "SELECT true or false or true;",
+            "SELECT true and false and false;",
+            "SELECT a FROM T WHERE a.id = 2 or (a.id = 3 and a.age = 73);",
+            "SELECT a FROM T WHERE (a.id = 2 or a.id = 3) and (a.age = 73 or a.age = 100);",
+            "SELECT * from Evaluation e JOIN Value v ON e.CaseNum = v.CaseNum\n" +
+                    "    AND e.FileNum = v.FileNum AND e.ActivityNum = v.ActivityNum;",
             "use a.b;",
             " SELECT 1;",
             "SELECT a FROM T;",
@@ -48,33 +57,34 @@ public class TestSqlParser
             "SELECT abs, 2 as abs;",
     };
 
+    private static final String[] warningSqlStrings = new String[] {
+            "SELECT true or false and false;",
+            "SELECT a FROM T WHERE a.id = 2 or a.id = 3 and a.age = 73;",
+            "SELECT a FROM T WHERE (a.id = 2 or a.id = 3) and a.age = 73 or a.age = 100;"
+    };
+
     private AstNode parse(String sql)
     {
         return parseStatement(sql);
     }
 
     @Test
-    public void smokeTest()
+    public void validInputTest()
     {
-        for (String sql : testSqlTeststrings) {
-            assertNotNull(parse(sql));
+        for (String sql : nonWarningSqlStrings) {
+            AstNode shouldNotThrowWarning = parse(sql);
+            List<CoreSqlWarning> warningsGenerated = lintingVisitor.lint(shouldNotThrowWarning);
+            assertEquals(warningsGenerated.size(), 0);
         }
     }
 
     @Test
-    public void parseUnparseTest()
+    public void invalidInputTest()
     {
-        for (String sql : testSqlTeststrings) {
-            AstNode ast = parse(sql);
-            assertNotNull(ast);
-            assertEquals(sql.trim(), unparse(ast).trim());
+        for (String sql : warningSqlStrings) {
+            AstNode shouldThrowWarning = parse(sql);
+            List<CoreSqlWarning> warningsGenerated = lintingVisitor.lint(shouldThrowWarning);
+            assertEquals(warningsGenerated.size(), 1);
         }
-    }
-
-    @Test
-    public void sqlLogicTest()
-            throws IOException
-    {
-        SqlLogicTest.run();
     }
 }
