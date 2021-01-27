@@ -22,5 +22,7 @@ public interface WarningCollector
 
     List<CoreSqlWarning> getWarnings();
 
+    void clearWarnings();
+
     boolean hasWarnings();
 }

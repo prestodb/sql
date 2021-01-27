@@ -14,8 +14,6 @@
 
 package com.facebook.coresql.warning;
 
-import java.util.Objects;
-
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
@@ -23,16 +21,13 @@ public final class CoreSqlWarning
 {
     private final WarningCode warningCode;
     private final String message;
+    private final WarningLocation location;
 
-    public CoreSqlWarning(WarningCode standardWarningCode, String message)
+    public CoreSqlWarning(WarningCode warningCode, String message, WarningLocation location)
     {
-        this.warningCode = requireNonNull(standardWarningCode, "warningCode is null");
-        this.message = requireNonNull(message, "message is null");
-    }
-
-    public CoreSqlWarning(WarningCodeSupplier warningCodeSupplier, String message)
-    {
-        this(requireNonNull(warningCodeSupplier, "warningCodeSupplier is null").toWarningCode(), message);
+        this.warningCode = requireNonNull(warningCode, "Warning code is null");
+        this.message = requireNonNull(message, "Warning message is null");
+        this.location = requireNonNull(location, "Warning location is null");
     }
 
     public WarningCode getWarningCode()
@@ -45,23 +40,9 @@ public final class CoreSqlWarning
         return message;
     }
 
-    @Override
-    public boolean equals(Object o)
+    public WarningLocation getLocation()
     {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        CoreSqlWarning that = (CoreSqlWarning) o;
-        return Objects.equals(warningCode, that.warningCode) && Objects.equals(message, that.message);
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash(warningCode, message);
+        return location;
     }
 
     @Override

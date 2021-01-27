@@ -16,19 +16,18 @@ package com.facebook.coresql.lint;
 import com.facebook.coresql.parser.AstNode;
 import com.facebook.coresql.warning.CoreSqlWarning;
 import com.facebook.coresql.warning.DefaultWarningCollector;
-import com.facebook.coresql.warning.WarningCollector;
 import com.facebook.coresql.warning.WarningCollectorConfig;
 import org.testng.annotations.Test;
 
 import java.util.List;
 
-import static com.facebook.coresql.lint.LintVisitor.lint;
 import static com.facebook.coresql.parser.ParserHelper.parseStatement;
 import static com.facebook.coresql.warning.WarningHandlingLevel.NORMAL;
 import static org.testng.Assert.assertEquals;
 
-public class TestLintVisitor
+public class TestMixedAndOr
 {
+    private static final LintingVisitor lintingVisitor = new MixedAndOr(new DefaultWarningCollector(new WarningCollectorConfig(), NORMAL));
     private static final String[] nonWarningSqlStrings = new String[] {
             "SELECT (true or false) and false;",
             "SELECT true or false or true;",
@@ -74,8 +73,7 @@ public class TestLintVisitor
     {
         for (String sql : nonWarningSqlStrings) {
             AstNode shouldNotThrowWarning = parse(sql);
-            WarningCollector collector = new DefaultWarningCollector(new WarningCollectorConfig(), NORMAL);
-            List<CoreSqlWarning> warningsGenerated = lint(shouldNotThrowWarning, collector);
+            List<CoreSqlWarning> warningsGenerated = lintingVisitor.lint(shouldNotThrowWarning);
             assertEquals(warningsGenerated.size(), 0);
         }
     }
@@ -85,8 +83,7 @@ public class TestLintVisitor
     {
         for (String sql : warningSqlStrings) {
             AstNode shouldThrowWarning = parse(sql);
-            WarningCollector collector = new DefaultWarningCollector(new WarningCollectorConfig(), NORMAL);
-            List<CoreSqlWarning> warningsGenerated = lint(shouldThrowWarning, collector);
+            List<CoreSqlWarning> warningsGenerated = lintingVisitor.lint(shouldThrowWarning);
             assertEquals(warningsGenerated.size(), 1);
         }
     }

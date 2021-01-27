@@ -58,6 +58,12 @@ public class DefaultWarningCollector
         return ImmutableList.copyOf(warnings.values());
     }
 
+    @Override
+    public void clearWarnings()
+    {
+        warnings.clear();
+    }
+
     private void addWarningIfNumWarningsLessThanConfig(CoreSqlWarning coreSqlWarning)
     {
         if (warnings.size() < config.getMaxWarnings()) {

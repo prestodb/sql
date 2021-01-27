@@ -17,71 +17,52 @@ package com.facebook.coresql.lint;
 import com.facebook.coresql.parser.AndExpression;
 import com.facebook.coresql.parser.AstNode;
 import com.facebook.coresql.parser.OrExpression;
-import com.facebook.coresql.parser.SimpleNode;
-import com.facebook.coresql.parser.SqlParserDefaultVisitor;
 import com.facebook.coresql.warning.CoreSqlWarning;
 import com.facebook.coresql.warning.WarningCollector;
+import com.facebook.coresql.warning.WarningLocation;
 
 import java.util.List;
 
+import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTANDEXPRESSION;
+import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTOREXPRESSION;
 import static com.facebook.coresql.warning.StandardWarningCode.MIXING_AND_OR_WITHOUT_PARENTHESES;
 
 /**
  * A visitor that validates an AST built from an SQL string. Right now, it validates
  * a single clause: don't mix AND and OR without parentheses.
  */
-public class LintVisitor
-        extends SqlParserDefaultVisitor
+public class MixedAndOr
+        extends LintingVisitor
 {
-    public WarningCollector warningCollector;
+    private static final String WARNING_MESSAGE = "To reduce ambiguity, don't mix AND and OR without parentheses.";
 
-    public LintVisitor(WarningCollector collector)
+    public MixedAndOr(WarningCollector collector)
     {
-        this.warningCollector = collector;
+        super(collector);
     }
 
     /**
      * Entry point to recursive visiting routine. We recurse, find any warning, then return the warnings found.
      *
      * @param node The root of the AST we're validating
-     * @param visitor The visitor instance that will traverse the AST
      * @return isValidInput True iff the AST is valid (does not mix AND and OR w/o parentheses)
      */
-    public static List<CoreSqlWarning> lint(AstNode node, LintVisitor visitor)
+    public List<CoreSqlWarning> lint(AstNode node)
     {
-        node.jjtAccept(visitor, null);
-        return visitor.warningCollector.getWarnings();
-    }
-
-    /**
-     * The entry point for external calls.
-     *
-     * @param node The root of the AST we're validating
-     * @return boolean True iff the AST is valid (does not mix AND and OR w/o parentheses)
-     */
-    public static List<CoreSqlWarning> lint(AstNode node, WarningCollector collector)
-    {
-        return lint(node, new LintVisitor(collector));
-    }
-
-    /**
-     * Recursively visits all children nodes in pre-order/DFS.
-     *
-     * @param node The node we're currently visiting
-     * @param data
-     */
-    @Override
-    public void defaultVisit(SimpleNode node, Void data)
-    {
-        node.childrenAccept(this, data);
+        node.jjtAccept(this, null);
+        List<CoreSqlWarning> warnings = this.getWarningCollector().getWarnings();
+        super.getWarningCollector().clearWarnings();
+        return warnings;
     }
 
     @Override
     public void visit(OrExpression node, Void data)
     {
-        // AndExpression kind is 57
-        if (node.getFirstChildOfKind(57) != null) {
-            warningCollector.add(new CoreSqlWarning(MIXING_AND_OR_WITHOUT_PARENTHESES, "To reduce ambiguity, don't mix AND and OR without parentheses."));
+        if (node.getFirstChildOfKind(JJTANDEXPRESSION) != null) {
+            super.getWarningCollector().add(
+                    new CoreSqlWarning(MIXING_AND_OR_WITHOUT_PARENTHESES.getWarningCode(),
+                            "Location " + node.GetCoordinates() + " | " + WARNING_MESSAGE,
+                            new WarningLocation(node.beginToken.beginLine, node.beginToken.beginColumn, node.beginToken.endLine, node.beginToken.endColumn)));
         }
         defaultVisit(node, data);
     }
@@ -89,9 +70,11 @@ public class LintVisitor
     @Override
     public void visit(AndExpression node, Void data)
     {
-        // OrExpression kind is 56
-        if (node.getFirstChildOfKind(56) != null) {
-            warningCollector.add(new CoreSqlWarning(MIXING_AND_OR_WITHOUT_PARENTHESES, "To reduce ambiguity, don't mix AND and OR without parentheses."));
+        if (node.getFirstChildOfKind(JJTOREXPRESSION) != null) {
+            super.getWarningCollector().add(
+                    new CoreSqlWarning(MIXING_AND_OR_WITHOUT_PARENTHESES.getWarningCode(),
+                            "Location: " + node.GetCoordinates() + " | " + WARNING_MESSAGE,
+                            new WarningLocation(node.beginToken.beginLine, node.beginToken.beginColumn, node.beginToken.endLine, node.beginToken.endColumn)));
         }
         defaultVisit(node, data);
     }
