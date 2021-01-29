@@ -19,27 +19,25 @@ import com.facebook.coresql.parser.SqlParserDefaultVisitor;
 import com.facebook.coresql.warning.CoreSqlWarning;
 import com.facebook.coresql.warning.WarningCollector;
 
-import java.util.List;
-
 public abstract class LintingVisitor
         extends SqlParserDefaultVisitor
 {
-    private WarningCollector warningCollector;
+    private final WarningCollector warningCollector;
 
     public LintingVisitor(WarningCollector collector)
     {
         this.warningCollector = collector;
     }
 
-    public abstract List<CoreSqlWarning> lint(AstNode node);
+    public void addWarningToCollector(CoreSqlWarning warning)
+    {
+        warningCollector.add(warning);
+    }
+
+    public abstract void lint(AstNode node);
 
     public WarningCollector getWarningCollector()
     {
         return warningCollector;
-    }
-
-    public void setWarningCollector(WarningCollector collector)
-    {
-        warningCollector = collector;
     }
 }

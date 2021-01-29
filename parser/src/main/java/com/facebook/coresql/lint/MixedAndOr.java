@@ -19,9 +19,6 @@ import com.facebook.coresql.parser.AstNode;
 import com.facebook.coresql.parser.OrExpression;
 import com.facebook.coresql.warning.CoreSqlWarning;
 import com.facebook.coresql.warning.WarningCollector;
-import com.facebook.coresql.warning.WarningLocation;
-
-import java.util.List;
 
 import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTANDEXPRESSION;
 import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTOREXPRESSION;
@@ -34,7 +31,7 @@ import static com.facebook.coresql.warning.StandardWarningCode.MIXING_AND_OR_WIT
 public class MixedAndOr
         extends LintingVisitor
 {
-    private static final String WARNING_MESSAGE = "To reduce ambiguity, don't mix AND and OR without parentheses.";
+    private static final String WARNING_MESSAGE = "Mixing AND and OR without parentheses.";
 
     public MixedAndOr(WarningCollector collector)
     {
@@ -42,27 +39,24 @@ public class MixedAndOr
     }
 
     /**
-     * Entry point to recursive visiting routine. We recurse, find any warning, then return the warnings found.
+     * Entry point to recursive visiting routine. We recurse, add any warnings to the current collector, then return.
      *
      * @param node The root of the AST we're validating
      * @return isValidInput True iff the AST is valid (does not mix AND and OR w/o parentheses)
      */
-    public List<CoreSqlWarning> lint(AstNode node)
+    public void lint(AstNode node)
     {
         node.jjtAccept(this, null);
-        List<CoreSqlWarning> warnings = this.getWarningCollector().getWarnings();
-        super.getWarningCollector().clearWarnings();
-        return warnings;
     }
 
     @Override
     public void visit(OrExpression node, Void data)
     {
-        if (node.getFirstChildOfKind(JJTANDEXPRESSION) != null) {
-            super.getWarningCollector().add(
+        if (node.jjtGetParent().getId() == JJTANDEXPRESSION) {
+            super.addWarningToCollector(
                     new CoreSqlWarning(MIXING_AND_OR_WITHOUT_PARENTHESES.getWarningCode(),
-                            "Location " + node.GetCoordinates() + " | " + WARNING_MESSAGE,
-                            new WarningLocation(node.beginToken.beginLine, node.beginToken.beginColumn, node.beginToken.endLine, node.beginToken.endColumn)));
+                            WARNING_MESSAGE,
+                            node.beginToken.beginLine, node.beginToken.beginColumn, node.beginToken.endLine, node.beginToken.endColumn));
         }
         defaultVisit(node, data);
     }
@@ -70,11 +64,11 @@ public class MixedAndOr
     @Override
     public void visit(AndExpression node, Void data)
     {
-        if (node.getFirstChildOfKind(JJTOREXPRESSION) != null) {
-            super.getWarningCollector().add(
+        if (node.jjtGetParent().getId() == JJTOREXPRESSION) {
+            super.addWarningToCollector(
                     new CoreSqlWarning(MIXING_AND_OR_WITHOUT_PARENTHESES.getWarningCode(),
-                            "Location: " + node.GetCoordinates() + " | " + WARNING_MESSAGE,
-                            new WarningLocation(node.beginToken.beginLine, node.beginToken.beginColumn, node.beginToken.endLine, node.beginToken.endColumn)));
+                            WARNING_MESSAGE,
+                            node.beginToken.beginLine, node.beginToken.beginColumn, node.beginToken.endLine, node.beginToken.endColumn));
         }
         defaultVisit(node, data);
     }

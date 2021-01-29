@@ -1,3 +1,4 @@
+*.test
 *.iml
 *.ipr
 *.iws

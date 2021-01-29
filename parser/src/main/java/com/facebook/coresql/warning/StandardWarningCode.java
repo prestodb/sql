@@ -16,8 +16,8 @@ package com.facebook.coresql.warning;
 
 public enum StandardWarningCode
 {
-    MIXING_AND_OR_WITHOUT_PARENTHESES(0x0000_0001)
-    /**/;
+    MIXING_AND_OR_WITHOUT_PARENTHESES(0x0000_0001);
+
     private final WarningCode warningCode;
 
     StandardWarningCode(int code)

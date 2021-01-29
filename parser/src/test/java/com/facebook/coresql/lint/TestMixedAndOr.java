@@ -14,12 +14,9 @@
 package com.facebook.coresql.lint;
 
 import com.facebook.coresql.parser.AstNode;
-import com.facebook.coresql.warning.CoreSqlWarning;
 import com.facebook.coresql.warning.DefaultWarningCollector;
 import com.facebook.coresql.warning.WarningCollectorConfig;
 import org.testng.annotations.Test;
-
-import java.util.List;
 
 import static com.facebook.coresql.parser.ParserHelper.parseStatement;
 import static com.facebook.coresql.warning.WarningHandlingLevel.NORMAL;
@@ -63,28 +60,30 @@ public class TestMixedAndOr
             "SELECT a FROM T WHERE (a.id = 2 or a.id = 3) and a.age = 73 or a.age = 100;"
     };
 
-    private AstNode parse(String sql)
+    private static AstNode parse(String sql)
     {
         return parseStatement(sql);
     }
 
-    @Test
-    public void validInputTest()
+    private static void assertHasWarnings(String[] statements, int expectedNumWarnings)
     {
-        for (String sql : nonWarningSqlStrings) {
+        lintingVisitor.getWarningCollector().clearWarnings();
+        for (String sql : statements) {
             AstNode shouldNotThrowWarning = parse(sql);
-            List<CoreSqlWarning> warningsGenerated = lintingVisitor.lint(shouldNotThrowWarning);
-            assertEquals(warningsGenerated.size(), 0);
+            lintingVisitor.lint(shouldNotThrowWarning);
+            assertEquals(lintingVisitor.getWarningCollector().getWarnings().size(), expectedNumWarnings);
         }
     }
 
     @Test
-    public void invalidInputTest()
+    public void testDoesntThrowsMixedAndOrWarning()
     {
-        for (String sql : warningSqlStrings) {
-            AstNode shouldThrowWarning = parse(sql);
-            List<CoreSqlWarning> warningsGenerated = lintingVisitor.lint(shouldThrowWarning);
-            assertEquals(warningsGenerated.size(), 1);
-        }
+        assertHasWarnings(nonWarningSqlStrings, 0);
+    }
+
+    @Test
+    public void testThrowsMixedAndOrWarning()
+    {
+        assertHasWarnings(warningSqlStrings, 1);
     }
 }

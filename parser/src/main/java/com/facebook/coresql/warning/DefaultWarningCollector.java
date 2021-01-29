@@ -17,6 +17,7 @@ package com.facebook.coresql.warning;
 import com.google.common.collect.ImmutableList;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -25,8 +26,9 @@ import static java.util.Objects.requireNonNull;
 public class DefaultWarningCollector
         implements WarningCollector
 {
-    private final Map<WarningCode, CoreSqlWarning> warnings = new LinkedHashMap<>();
+    private final Map<WarningCode, List<CoreSqlWarning>> warnings = new LinkedHashMap<>();
     private final WarningCollectorConfig config;
+    private int numWarnings;
     private final WarningHandlingLevel warningHandlingLevel;
 
     public DefaultWarningCollector(WarningCollectorConfig config, WarningHandlingLevel warningHandlingLevel)
@@ -36,24 +38,22 @@ public class DefaultWarningCollector
     }
 
     @Override
-    public void add(CoreSqlWarning warning)
+    public boolean add(CoreSqlWarning warning)
     {
         requireNonNull(warning, "warning is null");
+        boolean successfullyAdded = false;
         switch (warningHandlingLevel) {
             case SUPPRESS:
-                /* TODO */
+            case AS_ERROR:
                 break;
             case NORMAL:
-                addWarningIfNumWarningsLessThanConfig(warning);
-                break;
-            case AS_ERROR:
-                /* TODO */
-                break;
+                successfullyAdded = addWarningIfNumWarningsLessThanConfig(warning);
         }
+        return successfullyAdded;
     }
 
     @Override
-    public List<CoreSqlWarning> getWarnings()
+    public List<List<CoreSqlWarning>> getWarnings()
     {
         return ImmutableList.copyOf(warnings.values());
     }
@@ -62,18 +62,17 @@ public class DefaultWarningCollector
     public void clearWarnings()
     {
         warnings.clear();
+        numWarnings = 0;
     }
 
-    private void addWarningIfNumWarningsLessThanConfig(CoreSqlWarning coreSqlWarning)
+    private boolean addWarningIfNumWarningsLessThanConfig(CoreSqlWarning coreSqlWarning)
     {
-        if (warnings.size() < config.getMaxWarnings()) {
-            warnings.putIfAbsent(coreSqlWarning.getWarningCode(), coreSqlWarning);
+        if (numWarnings < config.getMaxWarnings()) {
+            warnings.putIfAbsent(coreSqlWarning.getWarningCode(), new LinkedList<>());
+            warnings.get(coreSqlWarning.getWarningCode()).add(coreSqlWarning);
+            numWarnings += 1;
+            return true;
         }
-    }
-
-    @Override
-    public boolean hasWarnings()
-    {
-        return !warnings.isEmpty();
+        return false;
     }
 }
