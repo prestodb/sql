@@ -25,9 +25,6 @@ public class WarningCode
 
     public WarningCode(int code, String name)
     {
-        if (code < 0) {
-            throw new IllegalArgumentException("code is negative");
-        }
         this.code = code;
         this.name = requireNonNull(name, "name is null");
     }
@@ -45,7 +42,7 @@ public class WarningCode
     @Override
     public String toString()
     {
-        return name + ":" + code;
+        return name + ", " + code;
     }
 
     @Override

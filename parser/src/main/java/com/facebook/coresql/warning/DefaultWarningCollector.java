@@ -41,13 +41,10 @@ public class DefaultWarningCollector
         requireNonNull(warning, "warning is null");
         switch (warningHandlingLevel) {
             case SUPPRESS:
-                /* TODO */
+            case AS_ERROR:
                 break;
             case NORMAL:
                 addWarningIfNumWarningsLessThanConfig(warning);
-                break;
-            case AS_ERROR:
-                /* TODO */
                 break;
         }
     }

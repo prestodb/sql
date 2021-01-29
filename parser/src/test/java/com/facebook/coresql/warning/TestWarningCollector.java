@@ -17,11 +17,11 @@ import com.facebook.coresql.parser.AstNode;
 import org.testng.annotations.Test;
 
 import static com.facebook.coresql.parser.ParserHelper.parseStatement;
+import static com.facebook.coresql.warning.StandardWarningCode.MIXING_AND_OR_WITHOUT_PARENTHESES;
 import static com.facebook.coresql.warning.WarningHandlingLevel.NORMAL;
 import static org.testng.Assert.assertThrows;
 
-/* TODO */
-public class WarningCollectorTest
+public class TestWarningCollector
 {
     private static final String[] nonWarningSqlStrings = new String[] {
             "SELECT (true or false) and false;",
@@ -64,15 +64,18 @@ public class WarningCollectorTest
     }
 
     @Test
-    public void nullConstructorInputTest()
-    {
-        assertThrows(NullPointerException.class, () -> new DefaultWarningCollector(null, NORMAL));
-    }
-
-    @Test
     public void nullAddInputTest()
     {
         WarningCollector collector = new DefaultWarningCollector(new WarningCollectorConfig(), NORMAL);
         assertThrows(NullPointerException.class, () -> collector.add(null));
+    }
+
+    // REMOVE BEFORE COMMIT
+    @Test
+    public void warningPrintOut()
+    {
+        String message = "Please remove the ___ from the ____.";
+        WarningCode code = MIXING_AND_OR_WITHOUT_PARENTHESES.getWarningCode();
+        System.out.println(new CoreSqlWarning(code, message, 1, 2, 3, 4));
     }
 }
