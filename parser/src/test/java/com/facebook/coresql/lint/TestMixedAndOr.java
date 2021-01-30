@@ -14,12 +14,9 @@
 package com.facebook.coresql.lint;
 
 import com.facebook.coresql.parser.AstNode;
-import com.facebook.coresql.warning.CoreSqlWarning;
 import com.facebook.coresql.warning.DefaultWarningCollector;
 import com.facebook.coresql.warning.WarningCollectorConfig;
 import org.testng.annotations.Test;
-
-import java.util.List;
 
 import static com.facebook.coresql.parser.ParserHelper.parseStatement;
 import static com.facebook.coresql.warning.WarningHandlingLevel.NORMAL;
@@ -69,22 +66,24 @@ public class TestMixedAndOr
     }
 
     @Test
-    public void validInputTest()
+    public void testDoesntThrowsMixedAndOrWarning()
     {
+        lintingVisitor.getWarningCollector().clearWarnings();
         for (String sql : nonWarningSqlStrings) {
             AstNode shouldNotThrowWarning = parse(sql);
-            List<CoreSqlWarning> warningsGenerated = lintingVisitor.lint(shouldNotThrowWarning);
-            assertEquals(warningsGenerated.size(), 0);
+            lintingVisitor.lint(shouldNotThrowWarning);
+            assertEquals(lintingVisitor.getWarningCollector().getWarnings().size(), 0);
         }
     }
 
     @Test
-    public void invalidInputTest()
+    public void testThrowsMixedAndOrWarning()
     {
+        lintingVisitor.getWarningCollector().clearWarnings();
         for (String sql : warningSqlStrings) {
             AstNode shouldThrowWarning = parse(sql);
-            List<CoreSqlWarning> warningsGenerated = lintingVisitor.lint(shouldThrowWarning);
-            assertEquals(warningsGenerated.size(), 1);
+            lintingVisitor.lint(shouldThrowWarning);
+            assertEquals(lintingVisitor.getWarningCollector().getWarnings().size(), 1);
         }
     }
 }

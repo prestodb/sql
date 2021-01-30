@@ -1,3 +1,5 @@
+parser/src/test/java/com/facebook/coresql/parser/sqllogictest/sqllogictest_results.txt
+*.test
 *.iml
 *.ipr
 *.iws

@@ -23,11 +23,12 @@ public final class CoreSqlWarning
     private final String message;
     private final WarningLocation location;
 
-    public CoreSqlWarning(WarningCode warningCode, String message, WarningLocation location)
+    public CoreSqlWarning(WarningCode warningCode, String message,
+            int beginLine, int beginColumn, int endLine, int endColumn)
     {
         this.warningCode = requireNonNull(warningCode, "Warning code is null");
         this.message = requireNonNull(message, "Warning message is null");
-        this.location = requireNonNull(location, "Warning location is null");
+        this.location = new WarningLocation(beginLine, beginColumn, endLine, endColumn);
     }
 
     public WarningCode getWarningCode()
@@ -35,19 +36,31 @@ public final class CoreSqlWarning
         return warningCode;
     }
 
-    public String getMessage()
-    {
-        return message;
-    }
-
-    public WarningLocation getLocation()
-    {
-        return location;
-    }
-
     @Override
     public String toString()
     {
-        return format("%s, %s", warningCode, message);
+        return format("Code and Code Num: %s\n Msg: %s\n Location: %s", warningCode, message, location);
+    }
+
+    private static class WarningLocation
+    {
+        private final int beginLine;
+        private final int beginColumn;
+        private final int endLine;
+        private final int endColumn;
+
+        public WarningLocation(int beginLine, int beginColumn, int endLine, int endColumn)
+        {
+            this.beginLine = beginLine;
+            this.beginColumn = beginColumn;
+            this.endLine = endLine;
+            this.endColumn = endColumn;
+        }
+
+        @Override
+        public String toString()
+        {
+            return format("%d:%d-%d:%d", beginLine, beginColumn, endLine, endColumn);
+        }
     }
 }
