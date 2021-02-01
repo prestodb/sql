@@ -13,69 +13,23 @@
  */
 package com.facebook.coresql.warning;
 
-import com.facebook.coresql.parser.AstNode;
 import org.testng.annotations.Test;
 
-import static com.facebook.coresql.parser.ParserHelper.parseStatement;
 import static com.facebook.coresql.warning.StandardWarningCode.MIXING_AND_OR_WITHOUT_PARENTHESES;
 import static com.facebook.coresql.warning.WarningHandlingLevel.NORMAL;
-import static org.testng.Assert.assertThrows;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class TestWarningCollector
 {
-    private static final String[] nonWarningSqlStrings = new String[] {
-            "SELECT (true or false) and false;",
-            "SELECT true or false or true;",
-            "SELECT true and false and false;",
-            "SELECT a FROM T WHERE a.id = 2 or (a.id = 3 and a.age = 73);",
-            "SELECT a FROM T WHERE (a.id = 2 or a.id = 3) and (a.age = 73 or a.age = 100);",
-            "SELECT * from Evaluation e JOIN Value v ON e.CaseNum = v.CaseNum\n" +
-                    "    AND e.FileNum = v.FileNum AND e.ActivityNum = v.ActivityNum;",
-            "use a.b;",
-            " SELECT 1;",
-            "SELECT a FROM T;",
-            "SELECT a FROM T WHERE p1 > p2;",
-            "SELECT a, b, c FROM T WHERE c1 < c2 and c3 < c4;",
-            "SELECT CASE a WHEN IN ( 1 ) THEN b ELSE c END AS x, b, c FROM T WHERE c1 < c2 and c3 < c4;",
-            "SELECT T.* FROM T JOIN W ON T.x = W.x;",
-            "SELECT NULL;",
-            "SELECT ARRAY[x] FROM T;",
-            "SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;",
-            "CREATE TABLE T AS SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;",
-            "INSERT INTO T SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;",
-            "SELECT ROW_NUMBER() OVER(PARTITION BY x) FROM T;",
-            "SELECT x, SUM(y) OVER (PARTITION BY y ORDER BY 1) AS min\n" +
-                    "FROM (values ('b',10), ('a', 10)) AS T(x, y)\n;",
-            "SELECT\n" +
-                    " CAST(MAP() AS map<bigint,array<boolean>>) AS \"bool_tensor_features\";",
-            "SELECT f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f())))))))))))))))))))))))))))));",
-            "SELECT abs, 2 as abs;",
-    };
-
-    private static final String[] warningSqlStrings = new String[] {
-            "SELECT true or false and false;",
-            "SELECT a FROM T WHERE a.id = 2 or a.id = 3 and a.age = 73;",
-            "SELECT a FROM T WHERE (a.id = 2 or a.id = 3) and a.age = 73 or a.age = 100;"
-    };
-
-    private AstNode parse(String sql)
-    {
-        return parseStatement(sql);
-    }
-
     @Test
-    public void nullAddInputTest()
+    public void addWarningTest()
     {
+        int maxNumWarnings = 2;
+        WarningCollectorConfig config = new WarningCollectorConfig();
+        config.setMaxWarnings(maxNumWarnings);
         WarningCollector collector = new DefaultWarningCollector(new WarningCollectorConfig(), NORMAL);
-        assertThrows(NullPointerException.class, () -> collector.add(null));
-    }
-
-    // REMOVE BEFORE COMMIT
-    @Test
-    public void warningPrintOut()
-    {
-        String message = "Please remove the ___ from the ____.";
-        WarningCode code = MIXING_AND_OR_WITHOUT_PARENTHESES.getWarningCode();
-        System.out.println(new CoreSqlWarning(code, message, 1, 2, 3, 4));
+        assertTrue(collector.add(new CoreSqlWarning(MIXING_AND_OR_WITHOUT_PARENTHESES.getWarningCode(), "", 0, 0, 0, 0)));
+        assertEquals(1, collector.getWarnings().size());
     }
 }

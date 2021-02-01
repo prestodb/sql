@@ -18,11 +18,9 @@ import java.util.List;
 
 public interface WarningCollector
 {
-    void add(CoreSqlWarning coreSqlWarning);
+    boolean add(CoreSqlWarning coreSqlWarning);
 
-    List<CoreSqlWarning> getWarnings();
+    List<List<CoreSqlWarning>> getWarnings();
 
     void clearWarnings();
-
-    boolean hasWarnings();
 }

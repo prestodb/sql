@@ -52,7 +52,7 @@ public class MixedAndOr
     @Override
     public void visit(OrExpression node, Void data)
     {
-        if (node.getFirstChildOfKind(JJTANDEXPRESSION) != null) {
+        if (node.jjtGetParent().getId() == JJTANDEXPRESSION) {
             super.addWarningToCollector(
                     new CoreSqlWarning(MIXING_AND_OR_WITHOUT_PARENTHESES.getWarningCode(),
                             WARNING_MESSAGE,
@@ -64,7 +64,7 @@ public class MixedAndOr
     @Override
     public void visit(AndExpression node, Void data)
     {
-        if (node.getFirstChildOfKind(JJTOREXPRESSION) != null) {
+        if (node.jjtGetParent().getId() == JJTOREXPRESSION) {
             super.addWarningToCollector(
                     new CoreSqlWarning(MIXING_AND_OR_WITHOUT_PARENTHESES.getWarningCode(),
                             WARNING_MESSAGE,

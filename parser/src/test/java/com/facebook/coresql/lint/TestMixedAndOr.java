@@ -60,30 +60,30 @@ public class TestMixedAndOr
             "SELECT a FROM T WHERE (a.id = 2 or a.id = 3) and a.age = 73 or a.age = 100;"
     };
 
-    private AstNode parse(String sql)
+    private static AstNode parse(String sql)
     {
         return parseStatement(sql);
+    }
+
+    private static void assertHasWarnings(String[] statements, int expectedNumWarnings)
+    {
+        lintingVisitor.getWarningCollector().clearWarnings();
+        for (String sql : statements) {
+            AstNode shouldNotThrowWarning = parse(sql);
+            lintingVisitor.lint(shouldNotThrowWarning);
+            assertEquals(lintingVisitor.getWarningCollector().getWarnings().size(), expectedNumWarnings);
+        }
     }
 
     @Test
     public void testDoesntThrowsMixedAndOrWarning()
     {
-        lintingVisitor.getWarningCollector().clearWarnings();
-        for (String sql : nonWarningSqlStrings) {
-            AstNode shouldNotThrowWarning = parse(sql);
-            lintingVisitor.lint(shouldNotThrowWarning);
-            assertEquals(lintingVisitor.getWarningCollector().getWarnings().size(), 0);
-        }
+        assertHasWarnings(nonWarningSqlStrings, 0);
     }
 
     @Test
     public void testThrowsMixedAndOrWarning()
     {
-        lintingVisitor.getWarningCollector().clearWarnings();
-        for (String sql : warningSqlStrings) {
-            AstNode shouldThrowWarning = parse(sql);
-            lintingVisitor.lint(shouldThrowWarning);
-            assertEquals(lintingVisitor.getWarningCollector().getWarnings().size(), 1);
-        }
+        assertHasWarnings(warningSqlStrings, 1);
     }
 }
