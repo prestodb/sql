@@ -75,15 +75,15 @@ public class AstNode
         return null;
     }
 
-    public String GetCoordinates()
+    public Location getLocation()
     {
-        return beginToken.beginLine + ":" + beginToken.beginColumn + "-" + endToken.endLine + ":" + endToken.endColumn;
+        return new Location(beginToken.beginLine, beginToken.beginColumn, endToken.endLine, endToken.endColumn);
     }
 
     @Override
     public String toString(String prefix)
     {
-        return super.toString(prefix) + " (" + GetCoordinates() + ")" +
+        return super.toString(prefix) + " (" + getLocation().toString() + ")" +
                 (NumChildren() == 0 ? " (" + beginToken.image + ")" : "");
     }
 }

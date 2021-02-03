@@ -22,7 +22,7 @@ import static org.testng.Assert.assertNotNull;
 
 public class TestSqlParser
 {
-    private static final String[] testSqlTeststrings = new String[] {
+    private static final String[] TEST_SQL_TESTSTRINGS = new String[] {
             "use a.b;",
             " SELECT 1;",
             "SELECT a FROM T;",
@@ -52,7 +52,7 @@ public class TestSqlParser
     @Test
     public void smokeTest()
     {
-        for (String sql : testSqlTeststrings) {
+        for (String sql : TEST_SQL_TESTSTRINGS) {
             assertNotNull(parse(sql));
         }
     }
@@ -60,7 +60,7 @@ public class TestSqlParser
     @Test
     public void parseUnparseTest()
     {
-        for (String sql : testSqlTeststrings) {
+        for (String sql : TEST_SQL_TESTSTRINGS) {
             AstNode ast = parse(sql);
             assertNotNull(ast);
             assertEquals(sql.trim(), unparse(ast).trim());
