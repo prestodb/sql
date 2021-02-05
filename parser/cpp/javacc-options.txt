@@ -14,6 +14,7 @@ options {
   NODE_PREFIX = "";
   MULTI = true;
   VISITOR = true;
+  VISITOR_METHOD_NAME_INCLUDES_TYPE_NAME = true;
 }
 
 PARSER_BEGIN(SqlParser)
@@ -96,8 +97,8 @@ PARSER_BEGIN(SqlParser)
 
     // For some nodes, the node is opened after some children are already created. Reset the begin for those to be
     // the begin of the left-most child.
-    if (astNode->NumChildren() > 0) {
-      Token* t0 = astNode->GetChild(0)->beginToken;
+    if (astNode->numChildren() > 0) {
+      Token* t0 = astNode->getChild(0)->beginToken;
       if (t0->beginLine < t->beginLine || (t0->beginLine == t->beginLine && t0->beginColumn < t->beginColumn)) {
         astNode->beginToken = t0;
       }
