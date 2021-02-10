@@ -75,6 +75,11 @@ public class AstNode
         return null;
     }
 
+    public final boolean hasChildOfKind(int kind)
+    {
+        return GetFirstChildOfKind(kind) != null;
+    }
+
     public Location getLocation()
     {
         return new Location(beginToken.beginLine, beginToken.beginColumn, endToken.endLine, endToken.endColumn);
