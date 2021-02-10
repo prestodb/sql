@@ -24,6 +24,7 @@
     <modules>
         <module>parser</module>
         <module>linter</module>
+        <module>rewriter</module>
     </modules>
 
     <build>
