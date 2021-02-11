@@ -8,8 +8,8 @@
         <version>0.2-SNAPSHOT</version>
     </parent>
 
-    <artifactId>presto-coresql-parser</artifactId>
-    <name>presto-coresql-parser</name>
+    <artifactId>presto-coresql-linter</artifactId>
+    <name>presto-coresql-linter</name>
 
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
@@ -30,49 +30,21 @@
             <artifactId>testng</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.facebook.presto</groupId>
+            <artifactId>presto-coresql-parser</artifactId>
+            <version>0.2-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>1.6.0</version>
-                <executions>
-                    <execution>
-                        <id>Build-parser</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <executable>./prepare-javacc-grammar.sh</executable>
-                    <basedir>grammar</basedir>
-                    <workingDirectory>grammar</workingDirectory>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.javacc.plugin</groupId>
-                <artifactId>javacc-maven-plugin</artifactId>
-                <version>3.0.2</version>
-                <executions>
-                    <execution>
-                        <id>jcc7jcc</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>jjtree-javacc</goal>
-                        </goals>
-                        <configuration>
-                            <sourceDirectory>target/generated-sources/javacc</sourceDirectory>
-                            <outputLanguage>java</outputLanguage>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
@@ -196,19 +168,6 @@
 
         <pluginManagement>
             <plugins>
-                <plugin>
-                    <groupId>org.javacc.plugin</groupId>
-                    <artifactId>javacc-maven-plugin</artifactId>
-                    <dependencies>
-                        <dependency>
-                            <groupId>net.java.dev.javacc</groupId>
-                            <artifactId>javacc</artifactId>
-                            <version>7.0.10</version>
-                            <scope>runtime</scope>
-                        </dependency>
-                    </dependencies>
-                </plugin>
-
                 <plugin>
                     <groupId>org.gaul</groupId>
                     <artifactId>modernizer-maven-plugin</artifactId>

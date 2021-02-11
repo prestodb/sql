@@ -12,15 +12,15 @@
  * limitations under the License.
  */
 
-package com.facebook.coresql.lint;
+package com.facebook.coresql.linter.lint;
 
+import com.facebook.coresql.linter.warning.WarningCollector;
 import com.facebook.coresql.parser.AndExpression;
 import com.facebook.coresql.parser.OrExpression;
-import com.facebook.coresql.warning.WarningCollector;
 
+import static com.facebook.coresql.linter.warning.StandardWarningCode.MIXING_AND_OR_WITHOUT_PARENTHESES;
 import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTANDEXPRESSION;
 import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTOREXPRESSION;
-import static com.facebook.coresql.warning.StandardWarningCode.MIXING_AND_OR_WITHOUT_PARENTHESES;
 
 /**
  * A visitor that validates an AST built from an SQL string. Right now, it validates

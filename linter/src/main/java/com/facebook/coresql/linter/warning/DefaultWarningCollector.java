@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package com.facebook.coresql.warning;
+package com.facebook.coresql.linter.warning;
 
 import com.facebook.coresql.parser.AstNode;
 import com.google.common.collect.ImmutableList;
