@@ -11,15 +11,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.facebook.coresql.lint;
+package com.facebook.coresql.linter.lint;
 
+import com.facebook.coresql.linter.warning.DefaultWarningCollector;
+import com.facebook.coresql.linter.warning.WarningCollectorConfig;
 import com.facebook.coresql.parser.AstNode;
-import com.facebook.coresql.warning.DefaultWarningCollector;
-import com.facebook.coresql.warning.WarningCollectorConfig;
 import org.testng.annotations.Test;
 
+import static com.facebook.coresql.linter.warning.StandardWarningCode.MIXING_AND_OR_WITHOUT_PARENTHESES;
 import static com.facebook.coresql.parser.ParserHelper.parseStatement;
-import static com.facebook.coresql.warning.StandardWarningCode.MIXING_AND_OR_WITHOUT_PARENTHESES;
 import static org.testng.Assert.assertEquals;
 
 public class TestMixedAndOr

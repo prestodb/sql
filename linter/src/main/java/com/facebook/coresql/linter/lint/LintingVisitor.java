@@ -12,12 +12,12 @@
  * limitations under the License.
  */
 
-package com.facebook.coresql.lint;
+package com.facebook.coresql.linter.lint;
 
+import com.facebook.coresql.linter.warning.WarningCode;
+import com.facebook.coresql.linter.warning.WarningCollector;
 import com.facebook.coresql.parser.AstNode;
 import com.facebook.coresql.parser.SqlParserDefaultVisitor;
-import com.facebook.coresql.warning.WarningCode;
-import com.facebook.coresql.warning.WarningCollector;
 
 public abstract class LintingVisitor
         extends SqlParserDefaultVisitor

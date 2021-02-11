@@ -12,23 +12,17 @@
  * limitations under the License.
  */
 
-package com.facebook.coresql.warning;
+package com.facebook.coresql.linter.warning;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import com.facebook.coresql.parser.AstNode;
 
-public class WarningCollectorConfig
+import java.util.List;
+
+public interface WarningCollector
 {
-    private int maxWarnings = Integer.MAX_VALUE;
+    void add(WarningCode code, String warningMessage, AstNode node);
 
-    public WarningCollectorConfig setMaxWarnings(int maxWarnings)
-    {
-        checkArgument(maxWarnings >= 0, "maxWarnings must be >= 0");
-        this.maxWarnings = maxWarnings;
-        return this;
-    }
+    List<CoreSqlWarning> getAllWarnings();
 
-    public int getMaxWarnings()
-    {
-        return maxWarnings;
-    }
+    void clearWarnings();
 }

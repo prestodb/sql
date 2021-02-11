@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.facebook.coresql.warning;
+package com.facebook.coresql.linter.warning;
 
 import com.facebook.coresql.parser.AstNode;
 import org.testng.annotations.Test;
