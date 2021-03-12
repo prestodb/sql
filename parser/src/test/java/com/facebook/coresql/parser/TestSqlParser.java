@@ -13,7 +13,10 @@
  */
 package com.facebook.coresql.parser;
 
+import com.facebook.coresql.parser.sqllogictest.java.SqlLogicTest;
 import org.testng.annotations.Test;
+
+import java.io.IOException;
 
 import static com.facebook.coresql.parser.ParserHelper.parseStatement;
 import static com.facebook.coresql.parser.Unparser.unparse;
@@ -65,5 +68,12 @@ public class TestSqlParser
             assertNotNull(ast);
             assertEquals(sql.trim(), unparse(ast).trim());
         }
+    }
+
+    @Test
+    public void sqlLogicTest()
+            throws IOException
+    {
+        SqlLogicTest.execute();
     }
 }
