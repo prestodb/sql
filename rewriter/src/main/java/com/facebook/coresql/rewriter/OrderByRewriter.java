@@ -21,11 +21,11 @@ import com.facebook.coresql.parser.SimpleNode;
 import com.facebook.coresql.parser.SqlParserDefaultVisitor;
 import com.facebook.coresql.parser.Subquery;
 import com.facebook.coresql.parser.Unparser;
+import com.google.common.collect.ImmutableSet;
 
-import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
-import static com.facebook.coresql.parser.ParserHelper.parseStatement;
 import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTINSERT;
 import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTLIMITCLAUSE;
 import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTORDERBYCLAUSE;
@@ -35,31 +35,24 @@ import static java.util.Objects.requireNonNull;
 public class OrderByRewriter
         extends Rewriter
 {
-    PatternMatcher<Set<AstNode>> matcher;
-    public Set<AstNode> patternMatchedNodes;
+    private final AstNode root;
+    private final Set<AstNode> patternMatchedNodes;
     private static final String REWRITE_NAME = "ORDER BY without LIMIT";
 
-    public OrderByRewriter()
+    public OrderByRewriter(AstNode root)
     {
-        this.matcher = new OrderByPatternMatcher();
-        this.patternMatchedNodes = new HashSet<>();
+        this.root = requireNonNull(root, "AST passed to rewriter was null");
+        this.patternMatchedNodes = new OrderByPatternMatcher(root).matchPattern();
     }
 
     @Override
-    public boolean rewritePatternIsPresent(String sql)
+    public Optional<RewriteResult> rewrite()
     {
-        AstNode root = requireNonNull(parseStatement(sql));
-        patternMatchedNodes = matcher.matchPattern(root);
-        return !patternMatchedNodes.isEmpty();
-    }
-
-    @Override
-    public RewriteResult rewrite(String originalSql)
-    {
-        AstNode root = requireNonNull(parseStatement(originalSql));
-        patternMatchedNodes = matcher.matchPattern(root);
+        if (patternMatchedNodes.isEmpty()) {
+            return Optional.empty();
+        }
         String rewrittenSql = Unparser.unparse(root, this);
-        return new RewriteResult(REWRITE_NAME, originalSql, rewrittenSql);
+        return Optional.of(new RewriteResult(REWRITE_NAME, rewrittenSql));
     }
 
     @Override
@@ -73,23 +66,21 @@ public class OrderByRewriter
 
     private static class OrderByPatternMatcher
             extends SqlParserDefaultVisitor
-            implements PatternMatcher<Set<AstNode>>
     {
-        private final Set<AstNode> matchedNodes;
+        private final AstNode root;
+        private final ImmutableSet.Builder<AstNode> builder = ImmutableSet.builder();
         private int depth;
         private static final int MINIMUM_SUBQUERY_DEPTH = 2; // Past this depth, all queries we encounter are subqueries
 
-        public OrderByPatternMatcher()
+        public OrderByPatternMatcher(AstNode root)
         {
-            this.matchedNodes = new HashSet<>();
+            this.root = requireNonNull(root, "AST passed to rewriter was null");
         }
 
-        @Override
-        public Set<AstNode> matchPattern(AstNode node)
+        public Set<AstNode> matchPattern()
         {
-            requireNonNull(node, "AST passed to pattern matcher was null");
-            node.jjtAccept(this, null);
-            return matchedNodes;
+            root.jjtAccept(this, null);
+            return builder.build();
         }
 
         /**
@@ -131,7 +122,7 @@ public class OrderByRewriter
         public void visit(QuerySpecification node, Void data)
         {
             if (hasOrderByWithNoLimit(node)) {
-                matchedNodes.add(node.GetFirstChildOfKind(JJTORDERBYCLAUSE));
+                builder.add(node.GetFirstChildOfKind(JJTORDERBYCLAUSE));
             }
             defaultVisit(node, data);
         }
@@ -140,7 +131,7 @@ public class OrderByRewriter
         public void visit(Subquery node, Void data)
         {
             if (hasOrderByWithNoLimit(node)) {
-                matchedNodes.add(node.GetFirstChildOfKind(JJTORDERBYCLAUSE));
+                builder.add(node.GetFirstChildOfKind(JJTORDERBYCLAUSE));
             }
             defaultVisit(node, data);
         }

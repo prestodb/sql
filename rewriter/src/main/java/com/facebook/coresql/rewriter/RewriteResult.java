@@ -22,17 +22,14 @@ import static java.util.Objects.requireNonNull;
 public class RewriteResult
 {
     private String nameOfRewrite;
-    private String originalSql;
     private String rewrittenSql;
 
     @JsonCreator
     public RewriteResult(
             @JsonProperty("nameOfRewrite") String nameOfRewrite,
-            @JsonProperty("originalSql") String originalSql,
             @JsonProperty("rewrittenSql") String rewrittenSql)
     {
         this.nameOfRewrite = requireNonNull(nameOfRewrite, "name of rewrite is null");
-        this.originalSql = requireNonNull(originalSql, "original sql statement is null");
         this.rewrittenSql = requireNonNull(rewrittenSql, "rewritten sql statement is null");
     }
 
@@ -40,12 +37,6 @@ public class RewriteResult
     public String getNameOfRewrite()
     {
         return nameOfRewrite;
-    }
-
-    @JsonProperty("originalSql")
-    public String getOriginalSql()
-    {
-        return originalSql;
     }
 
     @JsonProperty("rewrittenSql")

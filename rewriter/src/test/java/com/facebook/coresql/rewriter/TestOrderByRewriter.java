@@ -14,15 +14,22 @@
 
 package com.facebook.coresql.rewriter;
 
+import com.facebook.coresql.parser.AstNode;
+import com.google.common.collect.ImmutableMap;
 import org.testng.annotations.Test;
 
-import static java.lang.String.format;
+import java.util.Map;
+import java.util.Optional;
+
+import static com.facebook.coresql.parser.ParserHelper.parseStatement;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
 public class TestOrderByRewriter
 {
-    private static final String[] statementsThatDontNeedAnyRewrite = new String[] {
+    private static final String[] STATEMENTS_THAT_DONT_NEED_REWRITE = new String[] {
             // False Positive
             "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10) ORDER BY y LIMIT 10) ORDER BY z LIMIT 10;",
             "SELECT dealer_id, sales OVER (PARTITION BY dealer_id ORDER BY sales);",
@@ -51,52 +58,63 @@ public class TestOrderByRewriter
             "SELECT f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f())))))))))))))))))))))))))))));",
             "SELECT abs, 2 as abs;",
     };
-    private static final String[] statementsThatNeedOrderByRewrite = new String[] {
-            // True Positive
-            "CREATE TABLE blah AS SELECT * FROM T ORDER BY y;",
-            "INSERT INTO blah SELECT * FROM T ORDER BY y;",
-            "CREATE TABLE blah AS SELECT * FROM T ORDER BY SUM(payment);",
-            // False Negative
-            "INSERT INTO blah SELECT * FROM (SELECT t.date, t.code, t.qty FROM sales AS t ORDER BY t.date) LIMIT 10;",
-            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM T) ORDER BY z;",
-            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x));",
-            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10) ORDER BY y) ORDER BY z;",
-            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x) ORDER BY y LIMIT 10) ORDER BY z;",
-            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x) ORDER BY y) ORDER BY z LIMIT 10;",
-            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x) ORDER BY y LIMIT 10) ORDER BY z LIMIT 10;",
-            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10) ORDER BY y) ORDER BY z LIMIT 10;",
-            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10) ORDER BY y LIMIT 10) ORDER BY z;"
-    };
 
-    private void assertOrderByPatternIsMatchedOrUnmatched(String sql, boolean isMatched)
+    private static final ImmutableMap<String, String> STATEMENT_TO_REWRITTEN_STATEMENT =
+            new ImmutableMap.Builder<String, String>()
+                    .put("CREATE TABLE blah AS SELECT * FROM T ORDER BY y;",
+                            "CREATE TABLE blah AS SELECT * FROM T;")
+                    .put("INSERT INTO blah SELECT * FROM T ORDER BY y;",
+                            "INSERT INTO blah SELECT * FROM T;")
+                    .put("CREATE TABLE blah AS SELECT * FROM T ORDER BY SUM(payment);",
+                            "CREATE TABLE blah AS SELECT * FROM T;")
+                    .put("INSERT INTO blah SELECT * FROM (SELECT t.date, t.code, t.qty FROM sales AS t ORDER BY t.date) LIMIT 10;",
+                            "INSERT INTO blah SELECT * FROM (SELECT t.date, t.code, t.qty FROM sales AS t) LIMIT 10;")
+                    .put("CREATE TABLE blah AS SELECT * FROM (SELECT * FROM T) ORDER BY z;",
+                            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM T);")
+                    .put("CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x));",
+                            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T));")
+                    .put("CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10) ORDER BY y) ORDER BY z;",
+                            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10));")
+                    .put("CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x) ORDER BY y LIMIT 10) ORDER BY z;",
+                            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T) ORDER BY y LIMIT 10);")
+                    .put("CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x) ORDER BY y) ORDER BY z LIMIT 10;",
+                            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T)) ORDER BY z LIMIT 10;")
+                    .put("CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x) ORDER BY y LIMIT 10) ORDER BY z LIMIT 10;",
+                            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T) ORDER BY y LIMIT 10) ORDER BY z LIMIT 10;")
+                    .put("CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10) ORDER BY y) ORDER BY z LIMIT 10;",
+                            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10)) ORDER BY z LIMIT 10;")
+                    .put("CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10) ORDER BY y LIMIT 10) ORDER BY z;",
+                            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10) ORDER BY y LIMIT 10);")
+                    .build();
+
+    private void assertStatementUnchanged(String originalStatement)
     {
-        Rewriter rewriter = new OrderByRewriter();
-        if (isMatched) {
-            assertTrue(rewriter.rewritePatternIsPresent(sql));
-        }
-        else {
-            assertFalse(rewriter.rewritePatternIsPresent(sql));
-        }
+        assertFalse(getRewriteResult(originalStatement).isPresent());
     }
 
-    private void rewriteThenPrint(String sql)
+    private void assertStatementRewritten(String originalStatement, String expectedStatement)
     {
-        RewriteResult result = new OrderByRewriter().rewrite(sql);
-        System.out.println(format("Before --> %s", sql));
-        System.out.println(format("AFTER --> %s", result.getRewrittenSql()));
-        System.out.println();
+        Optional<RewriteResult> result = getRewriteResult(originalStatement);
+        assertTrue(result.isPresent());
+        assertEquals(result.get().getRewrittenSql(), expectedStatement);
+    }
+
+    private Optional<RewriteResult> getRewriteResult(String originalStatement)
+    {
+        AstNode ast = parseStatement(originalStatement);
+        assertNotNull(ast);
+        return new OrderByRewriter(ast).rewrite();
     }
 
     @Test
-    public void patternDetectionAndRewriteTest()
+    public void rewriteTest()
     {
-        for (String sql : statementsThatNeedOrderByRewrite) {
-            assertOrderByPatternIsMatchedOrUnmatched(sql, true);
-            rewriteThenPrint(sql);
+        for (Map.Entry<String, String> entry : STATEMENT_TO_REWRITTEN_STATEMENT.entrySet()) {
+            assertStatementRewritten(entry.getKey(), entry.getValue());
         }
 
-        for (String sql : statementsThatDontNeedAnyRewrite) {
-            assertOrderByPatternIsMatchedOrUnmatched(sql, false);
+        for (String sql : STATEMENTS_THAT_DONT_NEED_REWRITE) {
+            assertStatementUnchanged(sql);
         }
     }
 }

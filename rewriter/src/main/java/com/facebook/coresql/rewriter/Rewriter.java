@@ -16,22 +16,15 @@ package com.facebook.coresql.rewriter;
 
 import com.facebook.coresql.parser.Unparser;
 
+import java.util.Optional;
+
 public abstract class Rewriter
         extends Unparser
 {
     /**
-     * Attempts to rewrite a SQL statement, storing the name of the rewriter, original string, and rewritten string in a RewriteResult object.
+     * Attempts to rewrite a SQL statement, storing both the name of the rewriter and the rewritten statement in a RewriteResult object.
      *
-     * @param sql The statement that will be rewritten
-     * @return A RewriteResult object containing the name of the rewriter, original string, and rewritten string
+     * @return An Optional object containing information about the rewrite
      */
-    public abstract RewriteResult rewrite(String sql);
-
-    /**
-     * Checks if the pattern we're trying to rewrite is present within a SQL statement.
-     *
-     * @param sql The statement we're checking
-     * @return true if the rewrite pattern is present else false
-     */
-    public abstract boolean rewritePatternIsPresent(String sql);
+    public abstract Optional<RewriteResult> rewrite();
 }
