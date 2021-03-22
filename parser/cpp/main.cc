@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <stdlib.h>
+#include <ctime>
 
 #include "SqlParserConstants.h"
 #include "CharStream.h"
@@ -11,8 +12,7 @@
 #include "SqlParser.h"
 #include "SqlParserTokenManager.h"
 #include "parser.h"
-
-#include <ctime>
+#include "unparser.h"
 
 using namespace commonsql::parser;
 using namespace std;
@@ -39,21 +39,26 @@ int main(int argc, char **argv) {
   double time;
   start = clock();
 
-  for (int i = 0; i < 1; i++) {
     CharStream *stream = new CharStream(s.c_str(), s.size() - 1, 1, 1);
     SqlParserTokenManager *scanner = new SqlParserTokenManager(stream);
     SqlParser parser(scanner);
     parser.setErrorHandler(new ParseErrorHandler());
+  for (int i = 0; i < 10; i++) {
+    stream = new CharStream(s.c_str(), s.size() - 1, 1, 1);
+    scanner->ReInit(stream);
+    parser.ReInit(scanner);
     parser.compilation_unit();
     SimpleNode *root = (SimpleNode*)parser.jjtree.peekNode();
     if (root) {
       JAVACC_STRING_TYPE buffer;
       root->dumpToBuffer(" ", "\n", &buffer);
       printf("%s\n", buffer.c_str());
+
+      printf("Unparse:\n%s\n", unparse(static_cast<AstNode*>(root)).c_str());
     }
   }
 
   finish = clock();
   time = (double(finish)-double(start))/CLOCKS_PER_SEC;
-  printf ("Avg parsing time: %lfms\n", (time*1000)/1);
+  printf ("Avg parsing time: %lfms\n", (time*1000)/10);
 }
