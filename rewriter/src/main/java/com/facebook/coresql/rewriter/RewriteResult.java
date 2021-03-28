@@ -21,8 +21,8 @@ import static java.util.Objects.requireNonNull;
 
 public class RewriteResult
 {
-    private String nameOfRewrite;
-    private String rewrittenSql;
+    private final String nameOfRewrite;
+    private final String rewrittenSql;
 
     @JsonCreator
     public RewriteResult(
