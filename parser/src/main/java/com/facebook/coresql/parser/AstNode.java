@@ -13,6 +13,10 @@
  */
 package com.facebook.coresql.parser;
 
+import com.facebook.coresql.linter.warning.WarningCollector;
+
+import java.io.StringReader;
+
 public class AstNode
         extends com.facebook.coresql.parser.SimpleNode
 {
@@ -90,5 +94,59 @@ public class AstNode
     {
         return super.toString(prefix) + " (" + getLocation().toString() + ")" +
                 (NumChildren() == 0 ? " (" + beginToken.image + ")" : "");
+    }
+
+    @Override
+    public AstNode visitLogicalBinary(com.facebook.coresql.parser.SqlParser context)
+    {
+        LogicalBinaryExpression.Operator operator = getLogicalBinaryOperator(context.operator);
+        boolean warningForMixedAndOr = false;
+        Expression left = (Expression) visit(context.left);
+        Expression right = (Expression) visit(context.right);
+
+        if (operator.equals(LogicalBinaryExpression.Operator.OR) &&
+                (mixedAndOrOperatorParenthesisCheck(right, context.right, LogicalBinaryExpression.Operator.AND) ||
+                        mixedAndOrOperatorParenthesisCheck(left, context.left, LogicalBinaryExpression.Operator.AND))) {
+            warningForMixedAndOr = true;
+        }
+
+        if (operator.equals(LogicalBinaryExpression.Operator.AND) &&
+                (mixedAndOrOperatorParenthesisCheck(right, context.right, LogicalBinaryExpression.Operator.OR) ||
+                        mixedAndOrOperatorParenthesisCheck(left, context.left, LogicalBinaryExpression.Operator.OR))) {
+            warningForMixedAndOr = true;
+        }
+
+        if (warningForMixedAndOr) {
+            warningConsumer.accept(new ParsingWarning(
+                    "The Query contains OR and AND operator without proper parenthesis. "
+                            + "Make sure the operators are guarded by parenthesis in order "
+                            + "to fetch logically correct results",
+                    context.getStart().getLine(), context.getStart().getCharPositionInLine()));
+        }
+
+        return new LogicalBinaryExpression(
+                getLocation(context.operator),
+                getLogicalBinaryOperator(context.operator),
+                (Expression) visit(context.left),
+                (Expression) visit(context.right));
+        operator,
+                left,
+                right);
+    }
+
+    private boolean mixedAndOrOperatorParenthesisCheck(Expression expression, SqlBaseParser.BooleanExpressionContext node, LogicalBinaryExpression.Operator operator)
+    {
+        if (expression instanceof LogicalBinaryExpression) {
+            if (((LogicalBinaryExpression) expression).getOperator().equals(operator)) {
+                if (node.children.get(0) instanceof SqlBaseParser.ValueExpressionDefaultContext) {
+                    return !(((SqlBaseParser.PredicatedContext) node).valueExpression().getChild(0) instanceof
+                            SqlBaseParser.ParenthesizedExpressionContext);
+                }
+                else {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }
