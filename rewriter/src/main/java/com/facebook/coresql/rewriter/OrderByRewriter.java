@@ -51,7 +51,7 @@ public class OrderByRewriter
         if (patternMatchedNodes.isEmpty()) {
             return Optional.empty();
         }
-        String rewrittenSql = Unparser.unparse(root, this);
+        String rewrittenSql = Unparser.unparseClean(root, this);
         return Optional.of(new RewriteResult(REWRITE_NAME, rewrittenSql));
     }
 

@@ -14,6 +14,7 @@
 package com.facebook.coresql.parser;
 
 import static com.facebook.coresql.parser.SqlParserConstants.EOF;
+import static com.facebook.coresql.parser.SqlParserConstants.tokenImage;
 
 public class Unparser
         extends com.facebook.coresql.parser.SqlParserDefaultVisitor
@@ -21,7 +22,7 @@ public class Unparser
     protected StringBuilder stringBuilder = new StringBuilder();
     private Token lastToken = new Token();
 
-    public static String unparse(AstNode node, Unparser unparser)
+    public static String unparseClean(AstNode node, Unparser unparser)
     {
         unparser.stringBuilder.setLength(0);
         unparser.lastToken.next = node.beginToken;
@@ -30,9 +31,9 @@ public class Unparser
         return unparser.stringBuilder.toString();
     }
 
-    public static String unparse(AstNode node)
+    public static String unparseClean(AstNode node)
     {
-        return unparse(node, new Unparser());
+        return unparseClean(node, new Unparser());
     }
 
     private void printSpecialTokens(Token t)
@@ -60,6 +61,11 @@ public class Unparser
     public final void printToken(String s)
     {
         stringBuilder.append(" " + s + " ");
+    }
+
+    public final void printKeyword(int keyword)
+    {
+        printToken(tokenImage[keyword].substring(1, tokenImage[keyword].length() - 1));
     }
 
     private void printToken(Token t)
