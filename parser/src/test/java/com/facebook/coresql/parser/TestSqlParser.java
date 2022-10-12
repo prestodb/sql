@@ -19,7 +19,7 @@ import org.testng.annotations.Test;
 import java.io.IOException;
 
 import static com.facebook.coresql.parser.ParserHelper.parseStatement;
-import static com.facebook.coresql.parser.Unparser.unparse;
+import static com.facebook.coresql.parser.Unparser.unparseClean;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
@@ -66,7 +66,7 @@ public class TestSqlParser
         for (String sql : TEST_SQL_TESTSTRINGS) {
             AstNode ast = parse(sql);
             assertNotNull(ast);
-            assertEquals(sql.trim(), unparse(ast).trim());
+            assertEquals(sql.trim(), unparseClean(ast).trim());
         }
     }
 

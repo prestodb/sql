@@ -91,4 +91,9 @@ public class AstNode
         return super.toString(prefix) + " (" + getLocation().toString() + ")" +
                 (NumChildren() == 0 ? " (" + beginToken.image + ")" : "");
     }
+
+    public String GetSqlString()
+    {
+        return Unparser.unparseClean(this);
+    }
 }

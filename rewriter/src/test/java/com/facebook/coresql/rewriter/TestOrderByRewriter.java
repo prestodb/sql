@@ -103,7 +103,7 @@ public class TestOrderByRewriter
     {
         AstNode ast = parseStatement(originalStatement);
         assertNotNull(ast);
-        return new OrderByRewriter(ast).rewrite();
+        return new UnionAllToDisjunction(ast).rewrite();
     }
 
     @Test

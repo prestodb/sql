@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.facebook.coresql.parser.ParserHelper.parseStatement;
-import static com.facebook.coresql.parser.Unparser.unparse;
+import static com.facebook.coresql.parser.Unparser.unparseClean;
 import static com.facebook.coresql.parser.sqllogictest.java.SqlLogicTest.CoreSqlParsingError.PARSING_ERROR;
 import static com.facebook.coresql.parser.sqllogictest.java.SqlLogicTest.CoreSqlParsingError.UNPARSED_DOES_NOT_MATCH_ORIGINAL_ERROR;
 import static com.facebook.coresql.parser.sqllogictest.java.SqlLogicTest.CoreSqlParsingError.UNPARSING_ERROR;
@@ -132,7 +132,7 @@ public final class SqlLogicTest
         }
         String unparsed;
         try {
-            unparsed = unparse(ast.get());
+            unparsed = unparseClean(ast.get());
         }
         catch (Exception e) {
             return Optional.of(UNPARSING_ERROR);
