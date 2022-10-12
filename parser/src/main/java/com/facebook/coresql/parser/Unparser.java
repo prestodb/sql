@@ -307,7 +307,7 @@ public class Unparser
     }
 
     @Override
-    public void visit(CastEpression node, Void data)
+    public void visit(CastExpression node, Void data)
     {
         defaultVisit(node, data);
     }
@@ -355,36 +355,6 @@ public class Unparser
     }
 
     @Override
-    public void visit(Add node, Void data)
-    {
-        defaultVisit(node, data);
-    }
-
-    @Override
-    public void visit(Subtract node, Void data)
-    {
-        defaultVisit(node, data);
-    }
-
-    @Override
-    public void visit(Multiply node, Void data)
-    {
-        defaultVisit(node, data);
-    }
-
-    @Override
-    public void visit(Divide node, Void data)
-    {
-        defaultVisit(node, data);
-    }
-
-    @Override
-    public void visit(Mod node, Void data)
-    {
-        defaultVisit(node, data);
-    }
-
-    @Override
     public void visit(TimeZoneField node, Void data)
     {
         defaultVisit(node, data);
@@ -397,7 +367,7 @@ public class Unparser
     }
 
     @Override
-    public void visit(AdditiveEpression node, Void data)
+    public void visit(AdditiveExpression node, Void data)
     {
         defaultVisit(node, data);
     }
@@ -829,6 +799,12 @@ public class Unparser
     }
 
     @Override
+    public void visit(LambdaParam node, Void data)
+    {
+        defaultVisit(node, data);
+    }
+
+    @Override
     public void visit(LimitClause node, Void data)
     {
         defaultVisit(node, data);
@@ -842,12 +818,6 @@ public class Unparser
 
     @Override
     public void visit(TryExpression node, Void data)
-    {
-        defaultVisit(node, data);
-    }
-
-    @Override
-    public void visit(CastExpression node, Void data)
     {
         defaultVisit(node, data);
     }

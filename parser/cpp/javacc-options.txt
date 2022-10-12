@@ -106,6 +106,45 @@ PARSER_BEGIN(SqlParser)
     if (astNode->getId() == JJTUNSUPPORTED) {
       cout << "Unsupported feature used at: " << t->beginLine << ":" << t->beginColumn << " " << t->image  << "\n";
     }
+
+
+     if (astNode->IsNegatableOperator()) {
+        Token* t1 =  astNode->GetChild(0)->endToken;
+
+        if (astNode->Kind() == JJTISNULL) {
+           // IsNull -- see if the penultimate token is NOT
+           while (t1 != null && t1->kind != IS) {
+              t1 = t1->next;
+           }
+
+           if (t1->next->kind == NOT) {
+              astNode->SetNegated(true);
+           }
+        }
+        else if (astNode->NumChildren() > 1) {
+            Token* t2 = astNode->GetChild(1)->beginToken;
+            while (t1->next != null && t1->next != t2) {
+               if (t1->kind == NOT) {
+                  astNode->SetNegated(true);
+                  break;
+               }
+               t1 = t1->next;
+            }
+        }
+      }
+      else  if (astNode->NumChildren() == 2 && astNode->IsOperator()) {
+         // Hack locate the token just before the first token of the second operator
+         Token* t1 = astNode->GetChild(0)->endToken;
+         Token* t2 = astNode->GetChild(1)->beginToken;
+         while (t1->next != nullptr && t1->next != t2) {
+            t1 = t1->next;
+         }
+         astNode->SetOperator(t1->kind);
+      }
+
+      if (astNode->NumChildren() == 1 && astNode->IsOperator()) {
+         astNode->SetOperator(astNode->beginToken->kind);
+      }
   }
 
 PARSER_END(SqlParser)

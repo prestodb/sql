@@ -30,4 +30,16 @@ public class ParserHelper
             return null;
         }
     }
+
+    public static AstNode parseExpression(String expression)
+    {
+        SqlParser parser = new SqlParser(new SqlParserTokenManager(new SimpleCharStream(new StringReader(expression), 1, 1)));
+        try {
+            parser.derived_column();
+            return parser.getResult();
+        }
+        catch (ParseException pe) {
+            return null;
+        }
+    }
 }
