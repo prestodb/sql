@@ -1123,7 +1123,7 @@ void numeric_primary():
   | character_value_expression()
 }
 
-void numeric_value_function() #FunctionCall:
+void numeric_value_function() #BuiltinFunctionCall(1):
 {}
 {
     position_expression()
@@ -1371,7 +1371,7 @@ void string_value_function():
   | binary_value_function()
 }
 
-void character_value_function() #FunctionCall:
+void character_value_function() #BuiltinFunctionCall:
 {}
 {
     character_substring_function()
@@ -1595,7 +1595,7 @@ void time_zone_specifier():
   | "TIME" "ZONE" interval_primary()
 }
 
-void datetime_value_function() #FunctionCall:
+void datetime_value_function() #BuiltinFunctionCall:
 {}
 {
     current_date_value_function()
@@ -1668,7 +1668,7 @@ void interval_primary():
 }
 
 
-void interval_value_function() #FunctionCall:
+void interval_value_function() #BuiltinFunctionCall:
 {}
 {
     interval_absolute_value_function()
