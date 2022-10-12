@@ -331,6 +331,12 @@ public class Unparser
     }
 
     @Override
+    public void visit(BuiltinFunctionCall node, Void data)
+    {
+        defaultVisit(node, data);
+    }
+
+    @Override
     public void visit(Unused node, Void data)
     {
         defaultVisit(node, data);

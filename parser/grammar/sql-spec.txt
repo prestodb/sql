@@ -1123,9 +1123,12 @@ void numeric_primary():
   | character_value_expression()
 }
 
-void numeric_value_function() #BuiltinFunctionCall(1):
+void numeric_value_function() #BuiltinFunctionCall:
 {}
 {
+  // Builtin function calls are weird in that the name is a keyword and then a ( expressions ) so we open a new scope and just make an ArgumentList
+  // so that it will be just like a FunctionCall
+  (
     position_expression()
   | regex_occurrences_function()
   | regex_position_expression()
@@ -1142,6 +1145,7 @@ void numeric_value_function() #BuiltinFunctionCall(1):
   | floor_function()
   | ceiling_function()
   | width_bucket_function()
+  ) #ArgumentList(>0)
 }
 
 void position_expression():
@@ -1374,6 +1378,7 @@ void string_value_function():
 void character_value_function() #BuiltinFunctionCall:
 {}
 {
+  (
     character_substring_function()
   | regular_expression_substring_function()
   | regex_substring_function()
@@ -1385,6 +1390,7 @@ void character_value_function() #BuiltinFunctionCall:
   | character_overlay_function()
   | normalize_function()
   | specific_type_method()
+  ) #ArgumentList(>0)
 }
 
 void character_substring_function():
@@ -1598,11 +1604,13 @@ void time_zone_specifier():
 void datetime_value_function() #BuiltinFunctionCall:
 {}
 {
+  (
     current_date_value_function()
   | current_time_value_function()
   | current_timestamp_value_function()
   | current_local_time_value_function()
   | current_local_timestamp_value_function()
+  ) #ArgumentList(>0)
 }
 
 void current_date_value_function():
@@ -1671,7 +1679,7 @@ void interval_primary():
 void interval_value_function() #BuiltinFunctionCall:
 {}
 {
-    interval_absolute_value_function()
+    ( interval_absolute_value_function() ) #ArgumentList(>0)
 }
 
 void interval_absolute_value_function():
