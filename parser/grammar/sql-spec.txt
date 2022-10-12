@@ -893,7 +893,7 @@ void when_operand_list():
 void when_operand() #WhenOperand:
 {}
 {
-    // We push a dummy operand so the binary expressions are buil properly
+    // We push a dummy operand so the binary expressions are built properly
     ( {  } )#SearchedCaseOperand(true)
   (
     row_value_predicand()
@@ -924,7 +924,7 @@ void result():
   | ( "NULL" )#NullLiteral
 }
 
-void cast_specification() #CastEpression:
+void cast_specification() #CastExpression:
 {}
 {
     "CAST" "(" cast_operand() "AS" cast_target() ")"
@@ -1093,8 +1093,8 @@ void numeric_value_expression():
 {
     term()
     (
-      { PushNode(PopNode()); } "+"  term() #Add(2)
-    | { PushNode(PopNode()); } "-"  term() #Subtract(2)
+      { PushNode(PopNode()); } <PLUS: "+">  term() #AdditiveExpression(2)
+    | { PushNode(PopNode()); } <MINUS: "-">  term() #AdditiveExpression(2)
     )*
 }
 
@@ -1103,9 +1103,9 @@ void term():
 {
     factor()
     (
-      { PushNode(PopNode()); } "*" factor() #Multiply(2)
-    | { PushNode(PopNode()); } "/" factor() #Divide(2)
-    | { PushNode(PopNode()); } percent_operator() factor() #Mod(2)
+      { PushNode(PopNode()); } <STAR: "*"> factor() #MultiplicativeExpression(2)
+    | { PushNode(PopNode()); } <DIV: "/"> factor() #MultiplicativeExpression(2)
+    | { PushNode(PopNode()); } percent_operator() factor() #MultiplicativeExpression(2)
     )*
 }
 
@@ -1565,8 +1565,8 @@ void binary_overlay_function() #Unsupported:
 void datetime_value_expression():
 {}
 {
-    ( datetime_term() ) // [ ( "+" | "-" ) interval_term() ] )#AdditiveEpression(>1)
-  | ( interval_value_expression() ) //[ "+" datetime_term() ] )#AdditiveEpression(>1)
+    ( datetime_term() ) // [ ( "+" | "-" ) interval_term() ] )#AdditiveExpression(>1)
+  | ( interval_value_expression() ) //[ "+" datetime_term() ] )#AdditiveExpression(>1)
 }
 
 void datetime_term():
@@ -1646,9 +1646,9 @@ void current_local_timestamp_value_function() #Unsupported:
 void interval_value_expression():
 {}
 {
-    ( interval_term() ) //[ ( "+" | "-" ) interval_term() ] ) #AdditiveEpression(>1)
+    ( interval_term() ) //[ ( "+" | "-" ) interval_term() ] ) #AdditiveExpression(>1)
   | LOOKAHEAD("(" datetime_value_expression() "-" datetime_term() ")" )
-    ( "(" datetime_value_expression() "-" datetime_term() ")" )#AdditiveEpression
+    ( "(" datetime_value_expression() "-" datetime_term() ")" )#AdditiveExpression
     interval_qualifier()
 }
 
@@ -1691,7 +1691,7 @@ void interval_absolute_value_function():
 void boolean_value_expression() #OrExpression(>1):
 {}
 {
-    boolean_term() (  "OR" boolean_term() )*
+    boolean_term() ( "OR" boolean_term() )*
 }
 
 void boolean_term() #AndExpression(>1):
@@ -2772,13 +2772,13 @@ void comparison_predicate_part_2() #Comparison(2):
 void comp_op():
 {}
 {
-    "="
-  | "<>"
-  | "<"
-  | ">"
-  | "<="
-  | ">="
-  | "!=" // Non-standard
+    <EQUAL: "=">
+  | <NOT_EQUAL: "<>">
+  | <LESS_THAN: "<">
+  | <GREATER_THAN: ">">
+  | <LESS_THAN_OR_EQUAL: "<=">
+  | <GREATER_THAN_OR_EQUAL: ">=">
+  | <NOT_EQUAL_2: "!="> // Non-standard
 }
 
 void between_predicate():

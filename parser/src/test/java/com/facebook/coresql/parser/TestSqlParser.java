@@ -18,7 +18,13 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 
+import static com.facebook.coresql.parser.ParserHelper.parseExpression;
 import static com.facebook.coresql.parser.ParserHelper.parseStatement;
+import static com.facebook.coresql.parser.SqlParserConstants.LESS_THAN;
+import static com.facebook.coresql.parser.SqlParserConstants.NOT;
+import static com.facebook.coresql.parser.SqlParserConstants.PLUS;
+import static com.facebook.coresql.parser.SqlParserConstants.SQRT;
+import static com.facebook.coresql.parser.SqlParserConstants.tokenImage;
 import static com.facebook.coresql.parser.Unparser.unparse;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
@@ -45,6 +51,7 @@ public class TestSqlParser
                     " CAST(MAP() AS map<bigint,array<boolean>>) AS \"bool_tensor_features\";",
             "SELECT f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f())))))))))))))))))))))))))))));",
             "SELECT abs, 2 as abs;",
+            "SELECT sqrt(x), power(y, 5), myFunction('a') FROM T;",
     };
 
     private AstNode parse(String sql)
@@ -64,6 +71,7 @@ public class TestSqlParser
     public void parseUnparseTest()
     {
         for (String sql : TEST_SQL_TESTSTRINGS) {
+            System.out.println(sql);
             AstNode ast = parse(sql);
             assertNotNull(ast);
             assertEquals(sql.trim(), unparse(ast).trim());
@@ -75,5 +83,31 @@ public class TestSqlParser
             throws IOException
     {
         SqlLogicTest.execute();
+    }
+
+    @Test
+    public void testGetOperator()
+    {
+        assertEquals(parseExpression("x + 10").GetOperator(), PLUS);
+        assertEquals(parseExpression("x < /*comment*/ 10").GetOperator(), LESS_THAN);
+        assertEquals(parseExpression("NOT x").GetOperator(), NOT);
+    }
+
+    @Test
+    public void testGetFunctionName()
+    {
+        assertEquals(parseExpression("SQRT(10)").GetFunctionName(), tokenImage[SQRT].substring(1, tokenImage[SQRT].length() - 1));
+        assertEquals(parseExpression("POW(x, 2)").GetFunctionName(), "POW");
+        assertEquals(parseExpression("PoW(x, 2)").GetFunctionName(), "PoW");
+        assertEquals(parseExpression("MyFunction('a')").GetFunctionName(), "MyFunction");
+    }
+
+    @Test
+    public void testIsNegated()
+    {
+        assertEquals(parseExpression("a LIKE B").IsNegated(), false);
+        assertEquals(parseExpression("a NOT LIKE B").IsNegated(), true);
+        assertEquals(parseExpression("a IS NULL").IsNegated(), false);
+        assertEquals(parseExpression("a IS NOT NULL").IsNegated(), true);
     }
 }

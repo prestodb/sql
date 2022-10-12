@@ -13,11 +13,26 @@
  */
 package com.facebook.coresql.parser;
 
+import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTADDITIVEEXPRESSION;
+import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTANDEXPRESSION;
+import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTBETWEEN;
+import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTBUILTINFUNCTIONCALL;
+import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTCOMPARISON;
+import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTFUNCTIONCALL;
+import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTINPREDICATE;
+import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTISNULL;
+import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTLIKE;
+import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTMULTIPLICATIVEEXPRESSION;
+import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTNOTEXPRESSION;
+import static com.facebook.coresql.parser.SqlParserTreeConstants.JJTOREXPRESSION;
+
 public class AstNode
         extends com.facebook.coresql.parser.SimpleNode
 {
     public Token beginToken;
     public Token endToken;
+    private int operator;
+    private boolean negated;
 
     protected AstNode(int id)
     {
@@ -90,5 +105,73 @@ public class AstNode
     {
         return super.toString(prefix) + " (" + getLocation().toString() + ")" +
                 (NumChildren() == 0 ? " (" + beginToken.image + ")" : "");
+    }
+
+    // Other utility methods.
+
+    public boolean IsNegatableOperator()
+    {
+        switch (Kind()) {
+            case JJTBETWEEN:
+            case JJTLIKE:
+            case JJTINPREDICATE:
+            case JJTISNULL:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    public boolean IsOperator()
+    {
+        switch (Kind()) {
+            case JJTADDITIVEEXPRESSION:
+            case JJTMULTIPLICATIVEEXPRESSION:
+            case JJTOREXPRESSION:
+            case JJTANDEXPRESSION:
+            case JJTNOTEXPRESSION:
+            case JJTCOMPARISON:
+                // Other binary negatable operators
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    public void SetOperator(int operator)
+    {
+        this.operator = operator;
+    }
+
+    public int GetOperator()
+    {
+        if (!IsOperator()) {
+            throw new IllegalArgumentException("GetOperator cannot be called on: " + this);
+        }
+
+        return operator;
+    }
+
+    public String GetFunctionName()
+    {
+        if (Kind() == JJTFUNCTIONCALL) {
+            return GetChild(0).GetImage();
+        }
+
+        if (Kind() == JJTBUILTINFUNCTIONCALL) {
+            return beginToken.image;
+        }
+
+        return null;
+    }
+
+    public void SetNegated(boolean negated)
+    {
+        this.negated = negated;
+    }
+
+    public boolean IsNegated()
+    {
+        return negated;
     }
 }
