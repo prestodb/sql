@@ -52,6 +52,70 @@ public class TestSqlParser
             "SELECT f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f())))))))))))))))))))))))))))));",
             "SELECT abs, 2 as abs;",
             "SELECT sqrt(x), power(y, 5), myFunction('a') FROM T;",
+            "SELECT map_filter(m, (k, v) -> k + v > 0);",
+            "SELECT CASE WHEN ( CASE WHEN ( CASE WHEN ( CASE WHEN ( 1 ) THEN 0 END ) THEN 0 END ) THEN 0 END ) THEN 0 END FROM a;",
+            "SELECT CASE\n" +
+                    "                WHEN wdgfld.porttype = 1\n" +
+                    "                    THEN 'INPUT PORT'\n" +
+                    "                ELSE CASE\n" +
+                    "                    WHEN wdgfld.porttype = 1\n" +
+                    "                        THEN 'INPUT PORT'\n" +
+                    "                    ELSE CASE\n" +
+                    "                        WHEN wdgfld.porttype = 1\n" +
+                    "                            THEN 'INPUT PORT'\n" +
+                    "                        ELSE CASE\n" +
+                    "                            WHEN wdgfld.porttype = 1\n" +
+                    "                                THEN 'INPUT PORT'\n" +
+                    "                            ELSE CASE\n" +
+                    "                                WHEN wdgfld.porttype = 1\n" +
+                    "                                    THEN 'INPUT PORT'\n" +
+                    "                                ELSE CASE\n" +
+                    "                                    WHEN wdgfld.porttype = 1\n" +
+                    "                                        THEN 'INPUT PORT'\n" +
+                    "                                    ELSE CASE\n" +
+                    "                                        WHEN wdgfld.porttype = 1\n" +
+                    "                                            THEN 'INPUT PORT'\n" +
+                    "                                        ELSE CASE\n" +
+                    "                                            WHEN wdgfld.porttype = 1\n" +
+                    "                                                THEN 'INPUT PORT'\n" +
+                    "                                            ELSE CASE\n" +
+                    "                                                WHEN wdgfld.porttype = 1\n" +
+                    "                                                    THEN 'INPUT PORT'\n" +
+                    "                                                ELSE CASE\n" +
+                    "                                                    WHEN wdgfld.porttype = 1\n" +
+                    "                                                        THEN 'INPUT PORT'\n" +
+                    "                                                    ELSE CASE\n" +
+                    "                                                        WHEN wdgfld.porttype = 1\n" +
+                    "                                                            THEN 'INPUT PORT'\n" +
+                    "                                                        ELSE CASE\n" +
+                    "                                                            WHEN wdgfld.porttype = 1\n" +
+                    "                                                                THEN 'INPUT PORT'\n" +
+                    "                                                            ELSE CASE\n" +
+                    "                                                                WHEN wdgfld.porttype = 1\n" +
+                    "                                                                    THEN 'INPUT PORT'\n" +
+                    "                                                                ELSE CASE\n" +
+                    "                                                                    WHEN wdgfld.porttype = 1\n" +
+                    "                                                                        THEN 'INPUT PORT'\n" +
+                    "                                                                    ELSE '0'\n" +
+                    "                                                                END\n" +
+                    "                                                            END\n" +
+                    "                                                        END\n" +
+                    "                                                    END\n" +
+                    "                                                END\n" +
+                    "                                            END\n" +
+                    "                                        END\n" +
+                    "                                    END\n" +
+                    "                                END\n" +
+                    "                            END\n" +
+                    "                        END\n" +
+                    "                    END\n" +
+                    "                END\n" +
+                    "            END columnalias\n" +
+                    "FROM table1\n" +
+                    ";",
+            "SELECT ((((((((((((((((tblA)))))))))))))))) FROM mytable;",
+            "SELECT Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( Round( 0, 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 ), 0 )\n" +
+                    ";",
     };
 
     private AstNode parse(String sql)
@@ -63,7 +127,7 @@ public class TestSqlParser
     public void smokeTest()
     {
         for (String sql : TEST_SQL_TESTSTRINGS) {
-            assertNotNull(parse(sql));
+            assertNotNull(parse(sql), "Failed to parse query: " + sql);
         }
     }
 
