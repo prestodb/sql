@@ -8,6 +8,12 @@ Latest Changes since |JSQLPARSER_VERSION|
 =============================================================
 
 
+  * **fix: Git Branch is MAIN**
+    
+    Andreas Reichel, 2022-12-26
+  * **doc: Add basic HTML documentation based on Sphinx**
+    
+    Andreas Reichel, 2022-12-26
   * **build: Add Spotless Plugin**
     
     Andreas Reichel, 2022-12-26

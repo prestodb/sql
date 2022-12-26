@@ -16,7 +16,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
       - name: Run build with Gradle Wrapper
-        run: ./gradlew sphinx
+        run: gradle sphinx
       - name: Deploy
         uses: actions/configure-pages@v2
       - name: Upload artifact
