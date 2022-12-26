@@ -45,8 +45,7 @@ public class SimpleFileTest
                         k = line.substring(3).trim().toUpperCase();
                     }
 
-                    start = start
-                            || (!line.startsWith("--") || line.startsWith("-- @")) && line.trim().length() > 0;
+                    start = start || (!line.startsWith("--") || line.startsWith("-- @")) && line.trim().length() > 0;
                     end = start && line.trim().endsWith(";");
 
                     if (start) {

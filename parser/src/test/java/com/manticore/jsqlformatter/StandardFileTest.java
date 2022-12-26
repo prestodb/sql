@@ -34,8 +34,7 @@ import java.util.stream.Stream;
  */
 public class StandardFileTest
 {
-    public static final Pattern COMMENT_PATTERN = Pattern.compile("(?:'[^']*+')|(?:\\\"[^\\\"]*+\\\")"
-            + "|(^/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/\\s?\\n?|/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/|--.*?\\r?[\\n])", Pattern.DOTALL | Pattern.MULTILINE | Pattern.UNIX_LINES);
+    public static final Pattern COMMENT_PATTERN = Pattern.compile("(?:'[^']*+')|(?:\\\"[^\\\"]*+\\\")" + "|(^/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/\\s?\\n?|/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/|--.*?\\r?[\\n])", Pattern.DOTALL | Pattern.MULTILINE | Pattern.UNIX_LINES);
 
     public static final String TEST_FOLDER_STR = "src/test/resources/com/manticore/jsqlformatter/standard";
 
@@ -68,8 +67,7 @@ public class StandardFileTest
                         k = line.substring(3).trim().toUpperCase();
                     }
 
-                    start = start
-                            || (!line.startsWith("--") || line.startsWith("-- @")) && line.trim().length() > 0;
+                    start = start || (!line.startsWith("--") || line.startsWith("-- @")) && line.trim().length() > 0;
                     end = start && line.trim().endsWith(";");
 
                     if (start) {

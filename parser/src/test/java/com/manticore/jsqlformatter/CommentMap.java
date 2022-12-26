@@ -26,8 +26,7 @@ public class CommentMap
 {
     private static final Logger LOGGER = Logger.getLogger(CommentMap.class.getName());
 
-    public static final Pattern COMMENT_PATTERN = Pattern.compile("(?:'[^']*+')|(?:\\\"[^\\\"]*+\\\")"
-            + "|(^/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/\\s?\\n?|/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/|--.*?\\r?[\\n])", Pattern.DOTALL | Pattern.MULTILINE | Pattern.UNIX_LINES);
+    public static final Pattern COMMENT_PATTERN = Pattern.compile("(?:'[^']*+')|(?:\\\"[^\\\"]*+\\\")" + "|(^/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/\\s?\\n?|/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/|--.*?\\r?[\\n])", Pattern.DOTALL | Pattern.MULTILINE | Pattern.UNIX_LINES);
 
     public static final Pattern LINE_END_COMMENT_PATTERN = Pattern.compile("(\\/\\*.*\\\\*\\/\\s?[\\,\\)]?\\n)");
 
@@ -104,8 +103,7 @@ public class CommentMap
                         if (next.extraNewLine) {
                             builder.append("\n");
                         }
-                        else if (next.newLine && builder.length() > 1
-                                && builder.charAt(builder.length() - 1) != '\n') {
+                        else if (next.newLine && builder.length() > 1 && builder.charAt(builder.length() - 1) != '\n') {
                             builder.append("\n");
                         }
                         else if (!c.matches("\\w")) {
@@ -146,8 +144,7 @@ public class CommentMap
                     break;
                 }
 
-                if (ansiStarted < 0 && position + 2 <= sqlStrWithoutComments.length()
-                        && sqlStrWithoutComments.substring(position, position + 2).matches("\u001B\\[")) {
+                if (ansiStarted < 0 && position + 2 <= sqlStrWithoutComments.length() && sqlStrWithoutComments.substring(position, position + 2).matches("\u001B\\[")) {
                     ansiStarted = position;
                 }
 
