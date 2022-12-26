@@ -1,0 +1,187 @@
+import se.bjurr.gitchangelog.plugin.gradle.GitChangelogTask
+
+import java.nio.charset.Charset
+
+plugins {
+    //id 'java'
+    //id 'maven-publish'
+    //id "ca.coglinc2.javacc" version "latest.release"
+    //id 'jacoco'
+    //id "com.github.spotbugs" version "latest.release"
+    //id 'pmd'
+    //id 'checkstyle'
+    
+    // download the RR tools which have no Maven Repository
+    id "de.undercouch.download" version "latest.release"
+
+    id "se.bjurr.gitchangelog.git-changelog-gradle-plugin" version "latest.release"
+}
+
+group = 'com.facebook.presto'
+
+def getVersion = { boolean considerSnapshot ->
+    def major = 0
+    def minor = 0
+    def patch = 0
+    def commit = ""
+    def snapshot =""
+    new ByteArrayOutputStream().withStream { os ->
+        exec {
+            workingDir "$projectDir"
+            args = [
+                    "--no-pager"
+                    , "describe"
+                    , "--tags"
+                    , "--always"
+                    , "--dirty=-SNAPSHOT"
+            ]
+            executable "git"
+            standardOutput = os
+        }
+        def matcher = os.toString() =~ /(\d*)\.(\d*)-(\d*)-([a-zA-Z\d]*)/
+        matcher.find()
+
+        major = matcher[0][1]
+        minor = matcher[0][2]
+        patch = matcher[0][3]
+        commit = matcher[0][4]
+
+        if (considerSnapshot && os.toString().trim().endsWith("-SNAPSHOT")) {
+            minor++
+            snapshot =  "-SNAPSHOT"
+        }
+    }
+    return "${major}.${minor}${snapshot}"
+}
+version = getVersion(true)
+
+description = 'Java SQL:2016 compliant Parser Suite'
+
+repositories {
+    gradlePluginPortal()
+    mavenLocal()
+    mavenCentral()
+}
+
+task renderRR() {
+    doLast {
+        // these WAR files have been provided as a courtesy by Gunther Rademacher 
+        // and belong to the RR - Railroad Diagram Generator Project
+        // https://github.com/GuntherRademacher/rr
+        //
+        // Hosting at manticore-projects.com is temporary until a better solution is found
+        // Please do not use these files without Gunther's permission
+        download.run {
+            src 'http://manticore-projects.com/download/convert.war'
+            dest "target/rr/convert.war"
+            overwrite false
+        }
+
+        download.run {
+            src 'http://manticore-projects.com/download/rr.war'
+            dest "target/rr/rr.war"
+            overwrite false
+        }
+
+        javaexec {
+            standardOutput = new FileOutputStream("target/rr/syntax.ebnf")
+            main = "-jar"
+            args = [
+                    "target/rr/convert.war",
+                    "parser/target/generated-sources/javacc/parser_tmp.jjt"
+            ]
+        }
+
+        javaexec {
+            main = "-jar"
+            args = [
+                    "target/rr/rr.war",
+                    "-noepsilon",
+                    "-color:#4D88FF",
+                    "-offset:0",
+                    "-width:800",
+                    //"-png",
+                    //"-out:target/rr/JSqlParserCC.zip",
+                    "-out:target/rr/syntax.xhtml",
+                    "target/rr/syntax.ebnf"
+            ]
+        }
+    }
+}
+
+task gitChangelogTask(type: GitChangelogTask) {
+    fromRepo = file("$projectDir")
+    file = new File("${projectDir}/sphinx/src/changelog.rst")
+    //fromRef = "4.0"
+    //toRef = "1.1";
+    templateContent ="""
+************************
+Changelog
+************************
+
+
+{{#tags}}
+{{#ifMatches name "^Unreleased.*"}}
+Latest Changes since |JSQLPARSER_VERSION|
+{{/ifMatches}}
+{{#ifMatches name "^(?!Unreleased).*"}}
+Version {{name}}
+{{/ifMatches}}
+=============================================================
+
+ {{#issues}}
+
+  {{#commits}}
+   {{#ifMatches messageTitle "^(?!Merge).*"}}
+  * **{{{messageTitle}}}**
+    
+    {{authorName}}, {{commitDate}}
+   {{/ifMatches}}
+  {{/commits}}
+
+ {{/issues}}
+{{/tags}}
+"""
+}
+
+task sphinx(type: Exec) {
+    dependsOn(gitChangelogTask)
+
+    String PROLOG = """
+.. |_| unicode:: U+00A0 
+    :trim: 
+
+.. |JSQLPARSER_EMAIL| replace:: support@manticore-projects.com
+.. |JSQLPARSER_VERSION| replace:: ${getVersion(false)}
+.. |JSQLPARSER_SNAPSHOT_VERSION| replace:: ${getVersion(true)}
+.. |JSQLPARSER_STABLE_VERSION_LINK| raw:: html
+
+    <a href='http://manticore-projects.com/download/${project.name}-${getVersion(false)}/${project.name}-${getVersion(false)}.jar'>${project.name}-${getVersion(false)}.jar</a>
+
+.. |JSQLPARSER_SNAPSHOT_VERSION_LINK| raw:: html
+
+    <a href='http://manticore-projects.com/download/${project.name}-${getVersion(false)}/${project.name}-${getVersion(true)}.jar'>${project.name}-${getVersion(true)}.jar</a>
+
+"""
+
+    args = [
+            "-Dproject=Java SQL:2016 Parser"
+            , "-Dcopyright=Sreeni Viswanadha, 2022"
+            , "-Dauthor=Sreeni Viswanadha"
+            , "-Drelease=${getVersion(false)}"
+            , "-Drst_prolog=$PROLOG"
+            , "sphinx/src"
+            , "target/site/sphinx"
+    ]
+
+    executable "sphinx-build"
+
+    //store the output instead of printing to the console:
+    standardOutput = new ByteArrayOutputStream()
+
+    //extension method stopTomcat.output() can be used to obtain the output:
+    ext.output = {
+        return standardOutput.toString()
+    }
+}
+
