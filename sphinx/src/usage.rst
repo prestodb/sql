@@ -13,7 +13,7 @@ You will need to have ``JDK 8`` or ``JDK 11`` installed.
 
     .. code-block:: shell
 
-			git clone https://github.com/kaikalur/sql.git
+			git clone https://github.com/prestodb/sql.git
 			cd sql	
 			mvn install
 
@@ -21,7 +21,7 @@ You will need to have ``JDK 8`` or ``JDK 11`` installed.
 
 	  .. code-block:: shell
     
-			git clone https://github.com/kaikalur/sql.git
+			git clone https://github.com/prestodb/sql.git
 			cd sql
 			gradle build
 

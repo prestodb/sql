@@ -8,6 +8,18 @@ Latest Changes since |JSQLPARSER_VERSION|
 =============================================================
 
 
+  * **fix: Try using native GIT**
+    
+    Andreas Reichel, 2022-12-26
+  * **fix: Try using native GIT**
+    
+    Andreas Reichel, 2022-12-26
+  * **fix: Gradle Wrapper is not needed**
+    
+    Andreas Reichel, 2022-12-26
+  * **fix: Gradle Wrapper is needed**
+    
+    Andreas Reichel, 2022-12-26
   * **fix: Git Branch is MAIN**
     
     Andreas Reichel, 2022-12-26

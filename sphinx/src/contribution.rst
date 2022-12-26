@@ -32,7 +32,7 @@ When starting afresh, clone the **Java SQL:2016 Parser** from the `GitHub` repos
 
 .. code-block:: Bash
 
-   git clone https://github.com/kaikalur/sql.git
+   git clone https://github.com/prestodb/sql.git
    cd sql
    git branch <new-branch>
 

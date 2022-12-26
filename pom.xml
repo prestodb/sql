@@ -172,7 +172,22 @@
                         <formatAnnotations />  <!-- fixes formatting of type annotations, see below -->
                     </java>
                 </configuration>
-            </plugin>
+            </plugin>            
         </plugins>
+        
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>pl.project13.maven</groupId>
+                    <artifactId>git-commit-id-plugin</artifactId>
+                    <configuration>
+                        <useNativeGit>true</useNativeGit>
+                        <generateGitPropertiesFile>true</generateGitPropertiesFile>
+                        <skip>false</skip>
+                        <runOnlyOnce>true</runOnlyOnce>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 </project>

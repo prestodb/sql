@@ -14,7 +14,7 @@ Java SQL:2016 Parser Library
 .. image:: https://maven-badges.herokuapp.com/maven-central/com.facebook.presto/presto-coresql/badge.svg
     :alt: Maven Repo
 
-.. image:: https://github.com/kaikalur/sql/actions/workflows/maven.yml/badge.svg
+.. image:: https://github.com/prestodb/sql/actions/workflows/maven.yml/badge.svg
     :alt: Maven Build Status
 
 .. image:: https://www.javadoc.io/badge/com.facebook.presto/presto-coresql.svg
