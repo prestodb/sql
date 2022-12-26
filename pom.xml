@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.facebook.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>99</version>
+        <version>100</version>
     </parent>
 
     <groupId>com.facebook.presto</groupId>
@@ -20,6 +20,11 @@
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
         <dep.airlift.version>0.198</dep.airlift.version>
+        <air.check.skip-pmd>false</air.check.skip-pmd>
+        <air.check.skip-enforcer>false</air.check.skip-enforcer>
+        <air.check.skip-checkstyle>false</air.check.skip-checkstyle>
+        <air.check.skip-dependency>false</air.check.skip-dependency>
+        <air.check.skip-duplicate-finder>false</air.check.skip-duplicate-finder>
     </properties>
 
     <modules>
@@ -82,14 +87,6 @@
             </plugin>
 
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-checkstyle-plugin</artifactId>
-                <configuration>
-                    <excludes>**/generated-sources/**/*</excludes>
-                </configuration>
-            </plugin>
-
-            <plugin>
                 <!-- <groupId>org.apache.maven.plugins</groupId> -->
                 <artifactId>maven-pmd-plugin</artifactId>
                 <configuration>
@@ -108,14 +105,6 @@
                         <phase>none</phase>
                     </execution>
                 </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-checkstyle-plugin</artifactId>
-                <configuration>
-                    <excludes>**/generated-sources/**/*</excludes>
-                </configuration>
             </plugin>
 
             <!-- Always build a jar with the test classes -->

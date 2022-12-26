@@ -13,7 +13,8 @@
  */
 package com.facebook.coresql.parser;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import static com.facebook.coresql.parser.ParserHelper.parseStatement;
 import static com.facebook.coresql.parser.SqlParserConstants.MAX_NON_RESERVED_WORD;
@@ -21,9 +22,6 @@ import static com.facebook.coresql.parser.SqlParserConstants.MAX_RESERVED_WORD;
 import static com.facebook.coresql.parser.SqlParserConstants.MIN_NON_RESERVED_WORD;
 import static com.facebook.coresql.parser.SqlParserConstants.MIN_RESERVED_WORD;
 import static com.facebook.coresql.parser.SqlParserConstants.tokenImage;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNull;
 
 public class TestKeywords
 {
@@ -36,7 +34,7 @@ public class TestKeywords
     public void testReservedWords()
     {
         for (int i = MIN_RESERVED_WORD + 1; i < MAX_RESERVED_WORD; i++) {
-            assertNull(parseStatement("select 1 as " + getTokenImageWithoutQuotes(i) + ";"),
+            Assertions.assertNull(parseStatement("select 1 as " + getTokenImageWithoutQuotes(i) + ";"),
                     getTokenImageWithoutQuotes(i) + " should be a reserved word.");
         }
     }
@@ -46,7 +44,7 @@ public class TestKeywords
     {
         // The last one is a weird one - "COUNT" so we ignore it for now.
         for (int i = MIN_NON_RESERVED_WORD + 1; i < MAX_NON_RESERVED_WORD - 1; i++) {
-            assertNotNull(parseStatement("select 1 as " + getTokenImageWithoutQuotes(i) + ";"),
+            Assertions.assertNotNull(parseStatement("select 1 as " + getTokenImageWithoutQuotes(i) + ";"),
                     getTokenImageWithoutQuotes(i) + " should NOT be a reserved word.");
         }
     }
@@ -56,7 +54,7 @@ public class TestKeywords
     {
         for (int i = MAX_RESERVED_WORD + 1; i < tokenImage.length; i++) {
             // All string literal tokens start with quote and if it's a keyword first char is a letter (somewhat loosely).
-            assertFalse(
+            Assertions.assertFalse(
                     tokenImage[i].charAt(0) == '"' && Character.isLetter(tokenImage[i].charAt(1)),
                     tokenImage[i] + " should be in one of the reserved word or non-reserved word group of tokens.");
         }

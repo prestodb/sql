@@ -16,16 +16,13 @@ package com.facebook.coresql.rewriter;
 
 import com.facebook.coresql.parser.AstNode;
 import com.google.common.collect.ImmutableMap;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.Optional;
 
 import static com.facebook.coresql.parser.ParserHelper.parseStatement;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
 
 public class TestOrderByRewriter
 {
@@ -89,20 +86,20 @@ public class TestOrderByRewriter
 
     private void assertStatementUnchanged(String originalStatement)
     {
-        assertFalse(getRewriteResult(originalStatement).isPresent());
+        Assertions.assertFalse(getRewriteResult(originalStatement).isPresent());
     }
 
     private void assertStatementRewritten(String originalStatement, String expectedStatement)
     {
         Optional<RewriteResult> result = getRewriteResult(originalStatement);
-        assertTrue(result.isPresent());
-        assertEquals(result.get().getRewrittenSql(), expectedStatement);
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals(result.get().getRewrittenSql(), expectedStatement);
     }
 
     private Optional<RewriteResult> getRewriteResult(String originalStatement)
     {
         AstNode ast = parseStatement(originalStatement);
-        assertNotNull(ast);
+        Assertions.assertNotNull(ast);
         return new OrderByRewriter(ast).rewrite();
     }
 

@@ -1,0 +1,8 @@
+SELECT abs(b-c),       CASE WHEN c>(SELECT avg(c) FROM t1) THEN a*2 ELSE b*10 END,       b,       a  FROM t1 WHERE b>c   AND d>e NON EXISTANT CLAUSE 4,1,3,2; ----> PARSING_ERROR
+
+===============================================
+RESULT
+===============================================
+Database dialect tested against: ALL
+183 statements found, 182 statements successfully parsed.
+99.45% of sqllogictest statements were successfully parsed.
