@@ -26,11 +26,14 @@ public class CommentMap
 {
     private static final Logger LOGGER = Logger.getLogger(CommentMap.class.getName());
 
-    public static final Pattern COMMENT_PATTERN = Pattern.compile("(?:'[^']*+')|(?:\\\"[^\\\"]*+\\\")" + "|(^/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/\\s?\\n?|/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/|--.*?\\r?[\\n])", Pattern.DOTALL | Pattern.MULTILINE | Pattern.UNIX_LINES);
+    public static final Pattern COMMENT_PATTERN = Pattern.compile(
+            "(?:'[^']*+')|(?:\\\"[^\\\"]*+\\\")" + "|(^/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/\\s?\\n?|/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/|--.*?\\r?[\\n])",
+            Pattern.DOTALL | Pattern.MULTILINE | Pattern.UNIX_LINES);
 
     public static final Pattern LINE_END_COMMENT_PATTERN = Pattern.compile("(\\/\\*.*\\\\*\\/\\s?[\\,\\)]?\\n)");
 
-    private static final Pattern STRING_PATTERN = Pattern.compile("(?:'[^']*+')|(?:\\\"[^\\\"]*+\\\")", Pattern.DOTALL | Pattern.MULTILINE | Pattern.UNIX_LINES);
+    private static final Pattern STRING_PATTERN = Pattern
+            .compile("(?:'[^']*+')|(?:\\\"[^\\\"]*+\\\")", Pattern.DOTALL | Pattern.MULTILINE | Pattern.UNIX_LINES);
 
     private static StringBuilder appendComment(StringBuilder builder, String keyword, String before, String after)
     {
@@ -50,16 +53,16 @@ public class CommentMap
             int end = matcher.end(0);
 
             if (!STRING_PATTERN.matcher(group).matches()) {
-//        if (OracleHint.isHintMatch(group))
-//          LOGGER.log(Level.FINE, "Oracle hint {0}", group);
-//        else {
+// if (OracleHint.isHintMatch(group))
+// LOGGER.log(Level.FINE, "Oracle hint {0}", group);
+// else {
                 Comment comment = new Comment(start, group);
                 if (start == 0 || (sqlStr.charAt(start - 1) == '\n' && sqlStr.charAt(end - 1) == '\n')) {
                     comment.newLine = true;
                     comment.extraNewLine = start > 1 && sqlStr.charAt(start - 2) == '\n';
                 }
                 put(comment.absolutePosition, comment);
-//        }
+// }
             }
         }
 
@@ -79,7 +82,10 @@ public class CommentMap
             comment.relativePosition = relativePosition - totalCommentsLength;
             totalCommentsLength += comment.text.replaceAll("\\s", "").length();
 
-            LOGGER.log(Level.FINE, "Found comment {0} at Position {1} (absolute) {2} (relative).", new Object[] {comment.text, comment.absolutePosition, comment.relativePosition});
+            LOGGER.log(
+                    Level.FINE,
+                    "Found comment {0} at Position {1} (absolute) {2} (relative).",
+                    new Object[] {comment.text, comment.absolutePosition, comment.relativePosition});
         }
     }
 
@@ -144,11 +150,13 @@ public class CommentMap
                     break;
                 }
 
-                if (ansiStarted < 0 && position + 2 <= sqlStrWithoutComments.length() && sqlStrWithoutComments.substring(position, position + 2).matches("\u001B\\[")) {
+                if (ansiStarted < 0 && position + 2 <= sqlStrWithoutComments.length() && sqlStrWithoutComments
+                        .substring(position, position + 2).matches("\u001B\\[")) {
                     ansiStarted = position;
                 }
 
-                if (ansiStarted >= 0 && sqlStrWithoutComments.substring(ansiStarted, position + 1).matches("\u001B\\[[;\\d]*[ -/]*[@-~]")) {
+                if (ansiStarted >= 0 && sqlStrWithoutComments.substring(ansiStarted, position + 1)
+                        .matches("\u001B\\[[;\\d]*[ -/]*[@-~]")) {
                     ansiStarted = -1;
                 }
 
@@ -163,7 +171,8 @@ public class CommentMap
                 }
 
                 if (ansiStarted < 0) {
-                    relativePosition = sqlStrWithoutComments.substring(0, position + 1).replaceAll("\u001B\\[[;\\d]*[ -/]*[@-~]|\\s", "").length();
+                    relativePosition = sqlStrWithoutComments.substring(0, position + 1)
+                            .replaceAll("\u001B\\[[;\\d]*[ -/]*[@-~]|\\s", "").length();
                 }
             }
         }

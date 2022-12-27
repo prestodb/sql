@@ -27,7 +27,8 @@ public final class TestUtils
     private static final Pattern SQL_SANITATION_PATTERN = Pattern.compile("(\\s+)", Pattern.MULTILINE);
 
     // Assure SPACE around Syntax Characters
-    private static final Pattern SQL_SANITATION_PATTERN2 = Pattern.compile("\\s*([!/,()=+\\-*|\\]<>:])\\s*", Pattern.MULTILINE);
+    private static final Pattern SQL_SANITATION_PATTERN2 = Pattern
+            .compile("\\s*([!/,()=+\\-*|\\]<>:])\\s*", Pattern.MULTILINE);
 
     private TestUtils()
     {}

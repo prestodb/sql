@@ -39,7 +39,8 @@ public class SimpleFileTest
             String line;
             String k = "";
 
-            try (FileReader fileReader = new FileReader(file); BufferedReader bufferedReader = new BufferedReader(fileReader)) {
+            try (FileReader fileReader = new FileReader(file); BufferedReader bufferedReader = new BufferedReader(
+                    fileReader)) {
                 while ((line = bufferedReader.readLine()) != null) {
                     if (!start && line.startsWith("--") && !line.startsWith("-- @")) {
                         k = line.substring(3).trim().toUpperCase();

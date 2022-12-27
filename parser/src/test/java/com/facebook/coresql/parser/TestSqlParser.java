@@ -37,7 +37,26 @@ public class TestSqlParser
 {
     public static Stream<String> sqlStrings()
     {
-        List<String> sqlStrings = Arrays.asList("use a.b;", " SELECT 1;", "SELECT a FROM T;", "SELECT a FROM T WHERE p1 > p2;", "SELECT a, b, c FROM T WHERE c1 < c2 and c3 < c4;", "SELECT CASE a WHEN IN ( 1 ) THEN b ELSE c END AS x, b, c FROM T WHERE c1 < c2 and c3 < c4;", "SELECT T.* FROM T JOIN W ON T.x = W.x;", "SELECT NULL;", "SELECT ARRAY[x] FROM T;", "SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;", "CREATE TABLE T AS SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;", "INSERT INTO T SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;", "SELECT ROW_NUMBER() OVER(PARTITION BY x) FROM T;", "SELECT x, SUM(y) OVER (PARTITION BY y ORDER BY 1) AS min\n" + "FROM (values ('b',10), ('a', 10)) AS T(x, y)\n;", "SELECT\n" + " CAST(MAP() AS map<bigint,array<boolean>>) AS \"bool_tensor_features\";", "SELECT f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f())))))))))))))))))))))))))))));", "SELECT abs, 2 as abs;", "SELECT sqrt(x), power(y, 5), myFunction('a') FROM T;", "SELECT concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat('1','2'),'3'),'4'),'5'),'6'),'7'),'8'),'9'),'10'),'11'),'12'),'13'),'14'),'15'),'16'),'17'),'18'),'19'),'20'),'21'),col1 FROM tbl t1;");
+        List<String> sqlStrings = Arrays.asList(
+                "use a.b;",
+                " SELECT 1;",
+                "SELECT a FROM T;",
+                "SELECT a FROM T WHERE p1 > p2;",
+                "SELECT a, b, c FROM T WHERE c1 < c2 and c3 < c4;",
+                "SELECT CASE a WHEN IN ( 1 ) THEN b ELSE c END AS x, b, c FROM T WHERE c1 < c2 and c3 < c4;",
+                "SELECT T.* FROM T JOIN W ON T.x = W.x;",
+                "SELECT NULL;",
+                "SELECT ARRAY[x] FROM T;",
+                "SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;",
+                "CREATE TABLE T AS SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;",
+                "INSERT INTO T SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;",
+                "SELECT ROW_NUMBER() OVER(PARTITION BY x) FROM T;",
+                "SELECT x, SUM(y) OVER (PARTITION BY y ORDER BY 1) AS min\n" + "FROM (values ('b',10), ('a', 10)) AS T(x, y)\n;",
+                "SELECT\n" + " CAST(MAP() AS map<bigint,array<boolean>>) AS \"bool_tensor_features\";",
+                "SELECT f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f())))))))))))))))))))))))))))));",
+                "SELECT abs, 2 as abs;",
+                "SELECT sqrt(x), power(y, 5), myFunction('a') FROM T;",
+                "SELECT concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat('1','2'),'3'),'4'),'5'),'6'),'7'),'8'),'9'),'10'),'11'),'12'),'13'),'14'),'15'),'16'),'17'),'18'),'19'),'20'),'21'),col1 FROM tbl t1;");
         return sqlStrings.stream();
     }
 
@@ -63,8 +82,7 @@ public class TestSqlParser
     }
 
     @Test
-    public void sqlLogicTest()
-            throws IOException
+    public void sqlLogicTest() throws IOException
     {
         SqlLogicTest.execute();
     }
@@ -80,7 +98,9 @@ public class TestSqlParser
     @Test
     public void testGetFunctionName()
     {
-        Assertions.assertEquals(parseExpression("SQRT(10)").GetFunctionName(), tokenImage[SQRT].substring(1, tokenImage[SQRT].length() - 1));
+        Assertions.assertEquals(
+                parseExpression("SQRT(10)").GetFunctionName(),
+                tokenImage[SQRT].substring(1, tokenImage[SQRT].length() - 1));
         Assertions.assertEquals("POW", parseExpression("POW(x, 2)").GetFunctionName());
         Assertions.assertEquals("PoW", parseExpression("PoW(x, 2)").GetFunctionName());
         Assertions.assertEquals("MyFunction", parseExpression("MyFunction('a')").GetFunctionName());

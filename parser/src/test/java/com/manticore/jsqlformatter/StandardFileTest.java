@@ -34,7 +34,9 @@ import java.util.stream.Stream;
  */
 public class StandardFileTest
 {
-    public static final Pattern COMMENT_PATTERN = Pattern.compile("(?:'[^']*+')|(?:\\\"[^\\\"]*+\\\")" + "|(^/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/\\s?\\n?|/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/|--.*?\\r?[\\n])", Pattern.DOTALL | Pattern.MULTILINE | Pattern.UNIX_LINES);
+    public static final Pattern COMMENT_PATTERN = Pattern.compile(
+            "(?:'[^']*+')|(?:\\\"[^\\\"]*+\\\")" + "|(^/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/\\s?\\n?|/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/|--.*?\\r?[\\n])",
+            Pattern.DOTALL | Pattern.MULTILINE | Pattern.UNIX_LINES);
 
     public static final String TEST_FOLDER_STR = "src/test/resources/com/manticore/jsqlformatter/standard";
 
@@ -61,7 +63,8 @@ public class StandardFileTest
             String line;
             String k = "";
 
-            try (FileReader fileReader = new FileReader(file); BufferedReader bufferedReader = new BufferedReader(fileReader)) {
+            try (FileReader fileReader = new FileReader(file); BufferedReader bufferedReader = new BufferedReader(
+                    fileReader)) {
                 while ((line = bufferedReader.readLine()) != null) {
                     if (!start && line.startsWith("--") && !line.startsWith("-- @")) {
                         k = line.substring(3).trim().toUpperCase();
@@ -93,7 +96,8 @@ public class StandardFileTest
     {
         String sql = COMMENT_PATTERN.matcher(originalSql).replaceAll("");
         if (laxDeparsingCheck) {
-            String s = sql.replaceAll("\\n\\s*;", ";").replaceAll("\\s+", " ").replaceAll("\\s*([!/,()=+\\-*|\\]<>])\\s*", "$1").toLowerCase().trim();
+            String s = sql.replaceAll("\\n\\s*;", ";").replaceAll("\\s+", " ")
+                    .replaceAll("\\s*([!/,()=+\\-*|\\]<>])\\s*", "$1").toLowerCase().trim();
             return !s.endsWith(";") ? s + ";" : s;
         }
         else {
@@ -103,7 +107,6 @@ public class StandardFileTest
 
     /**
      * Test parsing the provided examples
-     *
      */
     @DisplayName("Standard SQL File Test")
     @ParameterizedTest(name = "{index} {0}: {1}")
