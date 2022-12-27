@@ -18,7 +18,6 @@
     <url>https://github.com/prestodb/sql</url>
 
     <properties>
-        <air.main.basedir>${project.parent.basedir}</air.main.basedir>
         <dep.airlift.version>0.198</dep.airlift.version>
         <air.check.skip-pmd>false</air.check.skip-pmd>
         <air.check.skip-enforcer>false</air.check.skip-enforcer>

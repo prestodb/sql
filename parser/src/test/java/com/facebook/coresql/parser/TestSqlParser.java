@@ -69,7 +69,7 @@ public class TestSqlParser
     @MethodSource("sqlStrings")
     public void smokeTest(String sqlStr)
     {
-        Assertions.assertNotNull(parse(sqlStr));
+        Assertions.assertNotNull(parse(sqlStr), "Failed SQL:\n" + sqlStr);
     }
 
     @ParameterizedTest(name = "SQL {0}")
@@ -78,7 +78,7 @@ public class TestSqlParser
     {
         AstNode ast = parse(sqlStr);
         Assertions.assertNotNull(ast);
-        Assertions.assertEquals(sqlStr.trim(), unparse(ast).trim());
+        Assertions.assertEquals(sqlStr.trim(), unparse(ast).trim(), "Failed SQL:\n" + sqlStr);
     }
 
     @Test

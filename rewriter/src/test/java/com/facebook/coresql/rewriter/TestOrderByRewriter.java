@@ -11,7 +11,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.facebook.coresql.rewriter;
 
 import com.facebook.coresql.parser.AstNode;
@@ -52,7 +51,6 @@ public class TestOrderByRewriter
             "SELECT\n" + " CAST(MAP() AS map<bigint,array<boolean>>) AS \"bool_tensor_features\";",
             "SELECT f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f())))))))))))))))))))))))))))));",
             "SELECT abs, 2 as abs;"};
-
     private static final ImmutableMap<String, String> STATEMENT_TO_REWRITTEN_STATEMENT = new ImmutableMap.Builder<String, String>()
             .put("CREATE TABLE blah AS SELECT * FROM T ORDER BY y;", "CREATE TABLE blah AS SELECT * FROM T;")
             .put("INSERT INTO blah SELECT * FROM T ORDER BY y;", "INSERT INTO blah SELECT * FROM T;")
@@ -111,7 +109,6 @@ public class TestOrderByRewriter
         for (Map.Entry<String, String> entry : STATEMENT_TO_REWRITTEN_STATEMENT.entrySet()) {
             assertStatementRewritten(entry.getKey(), entry.getValue());
         }
-
         for (String sql : STATEMENTS_THAT_DONT_NEED_REWRITE) {
             assertStatementUnchanged(sql);
         }

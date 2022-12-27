@@ -199,7 +199,25 @@
 
             <plugin>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>2.22.2</version>
+                <version>3.0.0-M7</version>
+                <configuration>
+                    <properties>
+                        <configurationParameters>
+                            junit.jupiter.conditions.deactivate = *
+                            junit.jupiter.extensions.autodetection.enabled = true
+                            junit.jupiter.testinstance.lifecycle.default = per_class
+                            junit.jupiter.execution.parallel.enabled = true
+                        </configurationParameters>
+                    </properties>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>integration-test</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>
@@ -207,7 +225,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.0.0-M7</version>
                 <configuration combine.children="append">
-                    <trimStackTrace>false</trimStackTrace>
+                    <trimStackTrace>true</trimStackTrace>
                     <includes>
                         <include>**/*.java</include>
                         <include>target/**/*.java</include>
@@ -216,6 +234,8 @@
                     <excludes>
                         <exclude>**/*jmhTest*.java</exclude>
                         <exclude>**/*jmhType*.java</exclude>
+                        <!-- those shall be handled by the FAIL SAFE plugin only -->
+                        <exclude>**/*TestIT.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>

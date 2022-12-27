@@ -30,41 +30,46 @@ public class SimpleFileTest
     public static Stream<Entry<SQLKeyEntry, String>> getSqlMap()
     {
         LinkedHashMap<SQLKeyEntry, String> sqlMap = new LinkedHashMap<>();
-
         for (File file : new File(TEST_FOLDER_STR).listFiles(FILENAME_FILTER)) {
+            extractIntoMap(sqlMap, file);
+        }
+        return sqlMap.entrySet().stream();
+    }
+
+    protected static void extractIntoMap(LinkedHashMap<SQLKeyEntry, String> sqlMap, File file)
+    {
+        try (FileReader fileReader = new FileReader(file); BufferedReader bufferedReader = new BufferedReader(
+                fileReader)) {
             boolean start = false;
             boolean end;
-
             StringBuilder stringBuilder = new StringBuilder();
             String line;
             String k = "";
-
-            try (FileReader fileReader = new FileReader(file); BufferedReader bufferedReader = new BufferedReader(
-                    fileReader)) {
-                while ((line = bufferedReader.readLine()) != null) {
-                    if (!start && line.startsWith("--") && !line.startsWith("-- @")) {
-                        k = line.substring(3).trim().toUpperCase();
-                    }
-
-                    start = start || (!line.startsWith("--") || line.startsWith("-- @")) && line.trim().length() > 0;
-                    end = start && line.trim().endsWith(";");
-
-                    if (start) {
-                        stringBuilder.append(line).append("\n");
-                    }
-
-                    if (end) {
-                        sqlMap.put(new SQLKeyEntry(file, k), stringBuilder.toString().trim());
-                        stringBuilder.setLength(0);
-                        start = false;
-                    }
+            boolean afterHeader = false;
+            while ((line = bufferedReader.readLine()) != null) {
+                if (!afterHeader && line.startsWith("--")) {
+                    continue;
+                }
+                else {
+                    afterHeader = true;
+                }
+                if (!start && line.startsWith("--") && !line.startsWith("-- @")) {
+                    k = line.substring(3).trim().toUpperCase();
+                }
+                start = start || (!line.startsWith("--") || line.startsWith("-- @")) && line.trim().length() > 0;
+                end = start && line.trim().endsWith(";");
+                if (start) {
+                    stringBuilder.append(line).append("\n");
+                }
+                if (end) {
+                    sqlMap.put(new SQLKeyEntry(file, k), stringBuilder.toString().trim());
+                    stringBuilder.setLength(0);
+                    start = false;
                 }
             }
-            catch (IOException ex) {
-                LOGGER.log(Level.SEVERE, "Failed to read " + file.getAbsolutePath(), ex);
-            }
         }
-
-        return sqlMap.entrySet().stream();
+        catch (IOException ex) {
+            LOGGER.log(Level.SEVERE, "Failed to read " + file.getAbsolutePath(), ex);
+        }
     }
 }
