@@ -19,6 +19,9 @@ import com.facebook.coresql.parser.SimpleCharStream;
 import com.facebook.coresql.parser.SqlParser;
 import com.facebook.coresql.parser.SqlParserTokenManager;
 import com.facebook.coresql.parser.Unparser;
+import hu.webarticum.treeprinter.SimpleTreeNode;
+import hu.webarticum.treeprinter.TreeNode;
+import hu.webarticum.treeprinter.printer.listing.ListingTreePrinter;
 import org.junit.jupiter.api.Assertions;
 
 import java.io.StringReader;
@@ -62,22 +65,44 @@ public final class TestUtils
         return parser.getResult();
     }
 
-    public static void assertParseAndUnparse(String sqlStr, boolean relaxed)
+    public static AstNode assertParseAndUnparse(String sqlStr, boolean relaxed)
     {
         String expectedSqlStr = buildSqlString(sqlStr, relaxed);
         AstNode ast = null;
         try {
             ast = parseStatement(sqlStr);
+            String actualSqlStr = buildSqlString(Unparser.unparse(ast), relaxed);
+            Assertions.assertEquals(expectedSqlStr, actualSqlStr, "Failed SQL:\n" + sqlStr);
         }
         catch (ParseException ex) {
             Assertions.fail(ex.getLocalizedMessage() + "\n" + sqlStr);
         }
-        String actualSqlStr = buildSqlString(Unparser.unparse(ast), relaxed);
-        Assertions.assertEquals(expectedSqlStr, actualSqlStr, "Failed SQL:\n" + sqlStr);
+        return ast;
     }
 
-    public static void assertParseAndUnparse(String sqlStr) throws ParseException
+    public static AstNode assertParseAndUnparse(String sqlStr)
     {
-        assertParseAndUnparse(sqlStr, true);
+        return assertParseAndUnparse(sqlStr, true);
+    }
+
+    public static SimpleTreeNode translateNode(AstNode astNode)
+    {
+        String image = astNode.GetImage() == null || astNode.GetImage().isEmpty()
+                ? astNode.toString() + " [" + astNode.getLocation() + "]"
+                : astNode.toString() + ": " + astNode.GetImage() + " [" + astNode.getLocation() + "]";
+        SimpleTreeNode simpleTreeNode = new SimpleTreeNode(image);
+        AstNode[] astNodeChildren = new AstNode[astNode.NumChildren()];
+        for (int i = 0; i < astNode.NumChildren(); i++) {
+            simpleTreeNode.addChild(translateNode(astNode.GetChild(i)));
+        }
+        return simpleTreeNode;
+    }
+
+    public static String formatToTree(AstNode astNode) throws Exception
+    {
+        TreeNode rootTreeNode = null;
+        SimpleTreeNode rootNode = new SimpleTreeNode("SQL Text");
+        rootNode.addChild(translateNode(astNode));
+        return new ListingTreePrinter().stringify(rootNode);
     }
 }

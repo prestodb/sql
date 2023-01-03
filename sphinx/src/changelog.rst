@@ -8,16 +8,16 @@ Latest Changes since |JSQLPARSER_VERSION|
 =============================================================
 
 
-  * **fix: Try using native GIT**
+  * **test: Add many more Real Life SQL statements**
+    
+    Andreas Reichel, 2022-12-27
+  * **style: Tune the Eclipse Formatter Configuration**
+    
+    Andreas Reichel, 2022-12-27
+  * **doc: Update the readme**
     
     Andreas Reichel, 2022-12-26
   * **fix: Try using native GIT**
-    
-    Andreas Reichel, 2022-12-26
-  * **fix: Gradle Wrapper is not needed**
-    
-    Andreas Reichel, 2022-12-26
-  * **fix: Gradle Wrapper is needed**
     
     Andreas Reichel, 2022-12-26
   * **fix: Git Branch is MAIN**

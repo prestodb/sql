@@ -92,8 +92,8 @@ public class TestOrderByRewriter
     private void assertStatementRewritten(String originalStatement, String expectedStatement)
     {
         Optional<RewriteResult> result = getRewriteResult(originalStatement);
-        Assertions.assertTrue(result.isPresent());
-        Assertions.assertEquals(result.get().getRewrittenSql(), expectedStatement);
+        Assertions.assertTrue(result.isPresent(), originalStatement);
+        Assertions.assertEquals(result.get().getRewrittenSql(), expectedStatement, originalStatement);
     }
 
     private Optional<RewriteResult> getRewriteResult(String originalStatement)

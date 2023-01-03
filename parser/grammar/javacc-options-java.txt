@@ -12,6 +12,9 @@ options {
   VISITOR = true;
   VISITOR_RETURN_TYPE = "void";
   VISITOR_DATA_TYPE = "Void";
+  DEBUG_PARSER = false;
+  DEBUG_LOOKAHEAD = false;
+  DEBUG_TOKEN_MANAGER = false;
 }
 
 PARSER_BEGIN(SqlParser)

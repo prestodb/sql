@@ -1,6 +1,6 @@
-###########################
+############################
 Java SQL:2016 Parser Library
-###########################
+############################
 
 .. toctree::
    :maxdepth: 2
@@ -8,6 +8,7 @@ Java SQL:2016 Parser Library
 
    usage
    contribution
+   syntax
    keywords
    changelog
 

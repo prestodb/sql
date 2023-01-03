@@ -1,0 +1,47 @@
+plugins {
+    id 'java'
+    id "ca.coglinc2.javacc" version "latest.release"
+
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.+'
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.9.+'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.9.+'
+
+    // for the ASCII Trees
+    testImplementation 'hu.webarticum:tree-printer:+'
+
+    // https://mvnrepository.com/artifact/com.google.inject/guice
+    testImplementation 'com.google.inject:guice:5.1.0'
+
+    // https://mvnrepository.com/artifact/jakarta.validation/jakarta.validation-api
+    testImplementation 'jakarta.validation:jakarta.validation-api:3.0.2'
+
+    // https://mvnrepository.com/artifact/io.airlift/log
+    testImplementation 'io.airlift:log:+'
+
+    // https://mvnrepository.com/artifact/io.airlift/configuration
+    testImplementation 'io.airlift:configuration:+'
+
+    // https://mvnrepository.com/artifact/io.airlift/bootstrap
+    testImplementation 'io.airlift:bootstrap:+'
+
+    // https://mvnrepository.com/artifact/com.google.guava/guava
+    testImplementation 'com.google.guava:guava:31.1-jre'
+
+    // enforce latest version of JavaCC
+    javacc 'net.java.dev.javacc:javacc:+'
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+
+    //spotbugs
+    //pmd
+}
+
+compileJavacc {
+    arguments = [grammar_encoding: 'UTF-8', static: 'false' /*, java_template_type: 'modern'*/ ]
+}

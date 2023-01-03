@@ -14,10 +14,10 @@
 package com.facebook.coresql.linter.warning;
 
 import com.facebook.coresql.parser.AstNode;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import static com.facebook.coresql.parser.ParserHelper.parseStatement;
-import static org.testng.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestWarningCollector
 {

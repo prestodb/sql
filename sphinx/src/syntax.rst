@@ -7,5 +7,5 @@ Kindly provided by Gunther Rademacher.
 
 .. raw:: html
 
-    <iframe id="rrFrame" src="_static/JSqlParserCC.xhtml" height="640" width="100%"></iframe></div>
+    <iframe id="rrFrame" src="_static/syntax.xhtml" height="640" width="100%"></iframe>
 

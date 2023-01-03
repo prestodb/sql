@@ -1,15 +1,11 @@
 import se.bjurr.gitchangelog.plugin.gradle.GitChangelogTask
-
 import java.nio.charset.Charset
 
 plugins {
-    //id 'java'
-    //id 'maven-publish'
-    //id "ca.coglinc2.javacc" version "latest.release"
-    //id 'jacoco'
-    //id "com.github.spotbugs" version "latest.release"
-    //id 'pmd'
-    //id 'checkstyle'
+    id 'java'
+    id "ca.coglinc2.javacc" version "latest.release"
+    id "com.github.spotbugs" version "latest.release"
+    id 'checkstyle'
     
     // download the RR tools which have no Maven Repository
     id "de.undercouch.download" version "latest.release"
@@ -17,7 +13,15 @@ plugins {
     id "se.bjurr.gitchangelog.git-changelog-gradle-plugin" version "latest.release"
 }
 
-group = 'com.facebook.presto'
+allprojects {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven {
+            url 'https://oss.sonatype.org/content/repositories/snapshots'
+        }
+    }
+}
 
 def getVersion = { boolean considerSnapshot ->
     def major = 0
@@ -53,17 +57,33 @@ def getVersion = { boolean considerSnapshot ->
     }
     return "${major}.${minor}${snapshot}"
 }
+group = 'com.facebook.presto'
 version = getVersion(true)
-
 description = 'Java SQL:2016 compliant Parser Suite'
 
-repositories {
-    gradlePluginPortal()
-    mavenLocal()
-    mavenCentral()
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+test {
+    useJUnitPlatform()
+    // set heap size for the test JVM(s)
+    minHeapSize = "128m"
+    maxHeapSize = "1G"
+    jvmArgs << [
+            '-Djunit.jupiter.execution.parallel.enabled=true',
+            '-Djunit.jupiter.execution.parallel.config.strategy=dynamic',
+            '-Djunit.jupiter.execution.parallel.mode.default=concurrent'
+    ]
+}
+
+checkstyle {
+    sourceSets = [sourceSets.main, sourceSets.test]
 }
 
 task renderRR() {
+    dependsOn ':presto-coresql-parser:compileJavacc'
     doLast {
         // these WAR files have been provided as a courtesy by Gunther Rademacher 
         // and belong to the RR - Railroad Diagram Generator Project
@@ -73,37 +93,37 @@ task renderRR() {
         // Please do not use these files without Gunther's permission
         download.run {
             src 'http://manticore-projects.com/download/convert.war'
-            dest "target/rr/convert.war"
+            dest "$buildDir/rr/convert.war"
             overwrite false
         }
 
         download.run {
             src 'http://manticore-projects.com/download/rr.war'
-            dest "target/rr/rr.war"
+            dest "$buildDir/rr/rr.war"
             overwrite false
         }
 
         javaexec {
-            standardOutput = new FileOutputStream("target/rr/syntax.ebnf")
+            standardOutput = new FileOutputStream("$buildDir/rr/syntax.ebnf")
             main = "-jar"
             args = [
-                    "target/rr/convert.war",
-                    "parser/target/generated-sources/javacc/parser_tmp.jjt"
+                    "$buildDir/rr/convert.war",
+                    "${project(':presto-coresql-parser').buildDir}/generated/jjtree/com/facebook/coresql/parser/parser.jj"
             ]
         }
 
         javaexec {
             main = "-jar"
             args = [
-                    "target/rr/rr.war",
+                    "$buildDir/rr/rr.war",
                     "-noepsilon",
                     "-color:#4D88FF",
                     "-offset:0",
                     "-width:800",
                     //"-png",
                     //"-out:target/rr/JSqlParserCC.zip",
-                    "-out:target/rr/syntax.xhtml",
-                    "target/rr/syntax.ebnf"
+                    "-out:$buildDir/site/sphinx/_static/syntax.xhtml",
+                    "$buildDir/rr/syntax.ebnf"
             ]
         }
     }
@@ -171,7 +191,7 @@ task sphinx(type: Exec) {
             , "-Drelease=${getVersion(false)}"
             , "-Drst_prolog=$PROLOG"
             , "sphinx/src"
-            , "target/site/sphinx"
+            , "$buildDir/site/sphinx"
     ]
 
     executable "sphinx-build"
@@ -183,5 +203,7 @@ task sphinx(type: Exec) {
     ext.output = {
         return standardOutput.toString()
     }
+
+    finalizedBy renderRR
 }
 

@@ -3,9 +3,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.facebook.airlift</groupId>
+        <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>100</version>
+        <version>130</version>
     </parent>
 
     <groupId>com.facebook.presto</groupId>
@@ -18,7 +18,7 @@
     <url>https://github.com/prestodb/sql</url>
 
     <properties>
-        <dep.airlift.version>0.198</dep.airlift.version>
+        <dep.airlift.version>219</dep.airlift.version>
         <air.check.skip-pmd>false</air.check.skip-pmd>
         <air.check.skip-enforcer>false</air.check.skip-enforcer>
         <air.check.skip-checkstyle>false</air.check.skip-checkstyle>
@@ -35,19 +35,19 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>com.facebook.airlift</groupId>
+                <groupId>io.airlift</groupId>
                 <artifactId>configuration</artifactId>
                 <version>${dep.airlift.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>com.facebook.airlift</groupId>
+                <groupId>io.airlift</groupId>
                 <artifactId>log</artifactId>
                 <version>${dep.airlift.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>com.facebook.airlift</groupId>
+                <groupId>io.airlift</groupId>
                 <artifactId>bootstrap</artifactId>
                 <version>${dep.airlift.version}</version>
             </dependency>
@@ -123,7 +123,16 @@
                     </archive>
                 </configuration>
             </plugin>
-            
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <configuration>
+                    <configLocation>config/checkstyle/checkstyle.xml</configLocation>
+                    <suppressionsLocation>config/checkstyle/suppressions.xml</suppressionsLocation>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>

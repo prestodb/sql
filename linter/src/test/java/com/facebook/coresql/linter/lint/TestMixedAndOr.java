@@ -16,23 +16,23 @@ package com.facebook.coresql.linter.lint;
 import com.facebook.coresql.linter.warning.DefaultWarningCollector;
 import com.facebook.coresql.linter.warning.WarningCollectorConfig;
 import com.facebook.coresql.parser.AstNode;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import static com.facebook.coresql.linter.warning.StandardWarningCode.MIXING_AND_OR_WITHOUT_PARENTHESES;
 import static com.facebook.coresql.parser.ParserHelper.parseStatement;
-import static org.testng.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestMixedAndOr
 {
-    private static final LintingVisitor LINTING_VISITOR = new MixedAndOr(new DefaultWarningCollector(new WarningCollectorConfig().setMaxWarnings(1)));
+    private static final LintingVisitor LINTING_VISITOR = new MixedAndOr(
+            new DefaultWarningCollector(new WarningCollectorConfig().setMaxWarnings(1)));
     private static final String[] NON_WARNING_SQL_STRINGS = new String[] {
             "SELECT (true or false) and false;",
             "SELECT true or false or true;",
             "SELECT true and false and false;",
             "SELECT a FROM T WHERE a.id = 2 or (a.id = 3 and a.age = 73);",
             "SELECT a FROM T WHERE (a.id = 2 or a.id = 3) and (a.age = 73 or a.age = 100);",
-            "SELECT * from Evaluation e JOIN Value v ON e.CaseNum = v.CaseNum\n" +
-                    "    AND e.FileNum = v.FileNum AND e.ActivityNum = v.ActivityNum;",
+            "SELECT * from Evaluation e JOIN Value v ON e.CaseNum = v.CaseNum\n" + "    AND e.FileNum = v.FileNum AND e.ActivityNum = v.ActivityNum;",
             "use a.b;",
             " SELECT 1;",
             "SELECT a FROM T;",
@@ -46,27 +46,22 @@ public class TestMixedAndOr
             "CREATE TABLE T AS SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;",
             "INSERT INTO T SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;",
             "SELECT ROW_NUMBER() OVER(PARTITION BY x) FROM T;",
-            "SELECT x, SUM(y) OVER (PARTITION BY y ORDER BY 1) AS min\n" +
-                    "FROM (values ('b',10), ('a', 10)) AS T(x, y)\n;",
-            "SELECT\n" +
-                    " CAST(MAP() AS map<bigint,array<boolean>>) AS \"bool_tensor_features\";",
+            "SELECT x, SUM(y) OVER (PARTITION BY y ORDER BY 1) AS min\n" + "FROM (values ('b',10), ('a', 10)) AS T(x, y)\n;",
+            "SELECT\n" + " CAST(MAP() AS map<bigint,array<boolean>>) AS \"bool_tensor_features\";",
             "SELECT f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f())))))))))))))))))))))))))))));",
-            "SELECT abs, 2 as abs;",
-    };
-
+            "SELECT abs, 2 as abs;"};
     private static final String[] WARNING_SQL_STRINGS = new String[] {
             "SELECT true or false and false;",
             "SELECT a FROM T WHERE a.id = 2 or a.id = 3 and a.age = 73;",
-            "SELECT a FROM T WHERE (a.id = 2 or a.id = 3) and a.age = 73 or a.age = 100;"
-    };
+            "SELECT a FROM T WHERE (a.id = 2 or a.id = 3) and a.age = 73 or a.age = 100;"};
 
     private static void assertHasMixedAndOrWarnings(String statement, int expectedNumWarnings)
     {
         AstNode ast = parseStatement(statement);
         LINTING_VISITOR.lint(ast);
-        assertEquals(LINTING_VISITOR.getWarningCollector().getAllWarnings().size(), expectedNumWarnings);
-        LINTING_VISITOR.getWarningCollector().getAllWarnings().forEach(x ->
-                assertEquals(x.getWarningCode(), MIXING_AND_OR_WITHOUT_PARENTHESES.getWarningCode()));
+        assertEquals(LINTING_VISITOR.getWarningCollector().getAllWarnings().size(), expectedNumWarnings, statement);
+        LINTING_VISITOR.getWarningCollector().getAllWarnings()
+                .forEach(x -> assertEquals(x.getWarningCode(), MIXING_AND_OR_WITHOUT_PARENTHESES.getWarningCode()));
     }
 
     @Test
