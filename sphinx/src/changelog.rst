@@ -8,6 +8,9 @@ Latest Changes since |JSQLPARSER_VERSION|
 =============================================================
 
 
+  * **build: Gradle Build and Rail Road Diagrams**
+    
+    Andreas Reichel, 2023-01-03
   * **test: Add many more Real Life SQL statements**
     
     Andreas Reichel, 2022-12-27

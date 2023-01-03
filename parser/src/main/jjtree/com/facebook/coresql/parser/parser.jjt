@@ -1,0 +1,8322 @@
+options {
+  STATIC = false;
+  LOOKAHEAD=3;
+  IGNORE_CASE=true;
+  UNICODE_INPUT=true;
+  ERROR_REPORTING=false;
+  NODE_DEFAULT_VOID = true;
+  NODE_SCOPE_HOOK = true;
+  NODE_CLASS = "AstNode";
+  NODE_PREFIX = "";
+  MULTI = true;
+  VISITOR = true;
+  VISITOR_RETURN_TYPE = "void";
+  VISITOR_DATA_TYPE = "Void";
+  DEBUG_PARSER = false;
+  DEBUG_LOOKAHEAD = false;
+  DEBUG_TOKEN_MANAGER = false;
+}
+
+PARSER_BEGIN(SqlParser)
+package com.facebook.coresql.parser;
+
+public class SqlParser {
+    private boolean IsIdNonReservedWord() {
+      int kind = getToken(1).kind;
+      if (kind == regular_identifier || kind == delimited_identifier || kind == Unicode_delimited_identifier) return true;
+
+      if (!(kind >= MIN_NON_RESERVED_WORD && kind <= MAX_NON_RESERVED_WORD)) return false;  // Not a nonreserved word.
+
+      // Some special cases.
+      switch (kind) {
+        // Some contextual keywords
+        case GROUP:
+        case ORDER:
+        case PARTITION:
+          return getToken(2).kind != BY;
+
+        case LIMIT:
+          return getToken(2).kind != unsigned_integer;
+
+        case ROWS:
+          return getToken(2).kind != BETWEEN;
+
+        // Some builtin functions
+        case TRIM:
+        case POSITION:
+        case MOD:
+        case POWER:
+        case RANK:
+        case ROW_NUMBER:
+        case FLOOR:
+        case MIN:
+        case MAX:
+        case UPPER:
+        case LOWER:
+        case CARDINALITY:
+        case ABS:
+          return getToken(2).kind != lparen;
+
+        default:
+          return true;
+       }
+    }
+
+    private boolean SyncToSemicolon() {
+      while (getToken(1).kind != EOF && getToken(1).kind != SqlParserConstants.semicolon) getNextToken();
+
+      if (getToken(1).kind == semicolon) {
+        getNextToken();
+      }
+
+      return true;
+    }
+
+    private boolean NotEof() {
+      return getToken(1).kind != EOF;
+    }
+
+    public void PushNode(Node node) { jjtree.pushNode(node); }
+    public Node PopNode() { return jjtree.popNode(); }
+
+    void jjtreeOpenNodeScope(Node node) {
+      ((AstNode)node).beginToken = getToken(1);
+    }
+
+    void jjtreeCloseNodeScope(Node node) {
+      AstNode astNode = ((AstNode)node);
+      astNode.endToken = getToken(0);
+      Token t = astNode.beginToken;
+
+      // For some nodes, the node is opened after some children are already created. Reset the begin for those to be
+      // the begin of the left-most child.
+      if (astNode.NumChildren() > 0) {
+        Token t0 = astNode.GetChild(0).beginToken;
+        if (t0.beginLine < t.beginLine || (t0.beginLine == t.beginLine && t0.beginColumn < t.beginColumn)) {
+          astNode.beginToken = t0;
+        }
+      }
+
+      if (astNode.IsNegatableOperator()) {
+        Token t1 =  astNode.GetChild(0).endToken;
+
+        if (astNode.Kind() == JJTISNULL) {
+           // IsNull -- see if the penultimate token is NOT
+           while (t1 != null && t1.kind != IS) {
+              t1 = t1.next;
+           }
+
+           if (t1.next.kind == NOT) {
+              astNode.SetNegated(true);
+           }
+        }
+        else if (astNode.NumChildren() > 1) {
+            Token t2 = astNode.GetChild(1).beginToken;
+            while (t1.next != null && t1.next != t2) {
+               if (t1.kind == NOT) {
+                  astNode.SetNegated(true);
+                  break;
+               }
+               t1 = t1.next;
+            }
+        }
+      }
+      else if (astNode.NumChildren() == 2 && astNode.IsOperator()) {
+         // Hack locate the token just before the first token of the second operator
+         Token t1 =  astNode.GetChild(0).endToken;
+         Token t2 = astNode.GetChild(1).beginToken;
+         while (t1.next != null && t1.next != t2) {
+            t1 = t1.next;
+         }
+         astNode.SetOperator(t1.kind);
+      }
+      else if (astNode.NumChildren() == 1 && astNode.IsOperator()) {
+         astNode.SetOperator(astNode.beginToken.kind);
+      }
+    }
+
+    public AstNode getResult()
+    {
+      return (AstNode) jjtree.popNode();
+    }
+  }
+
+PARSER_END(SqlParser)
+
+TOKEN_MGR_DECLS:
+{
+  void setKindToIdentifier(Token t) {
+    t.kind = regular_identifier;
+  }
+
+  void setUnicodeLiteralType(Token t) {
+    t.kind = unicode_literal;
+  }
+
+  void StoreImage(Token matchedToken) {
+    matchedToken.image = image.toString();
+  }
+}
+
+// Temporary entry point
+Node CompilationUnit() #CompilationUnit:
+{}
+{
+    (
+      LOOKAHEAD({ NotEof() })
+      try {
+        direct_SQL_statement()
+      } catch(ParseException pe) {
+        System.err.println("Parse error: " + getToken(1).beginLine + ":" + getToken(1).beginColumn + " at token: " + getToken(1).image);
+        SyncToSemicolon();
+      }
+    )*
+
+    <EOF>
+
+    { return jjtThis; }
+}
+// non_reserved words
+
+<UNREACHABLE>SKIP:
+{
+  // Dummy token to get a value range. Will never be mached. And it should be here positionally - before the first non reserved word
+  <MIN_NON_RESERVED_WORD: "MIN NON RESERVED WORD">
+}
+
+// This production should be here and moved out. See notes for details on handling non-reserved words.
+void non_reserved_word():
+{}
+{
+    <A: "A">
+  | <ABSOLUTE: "ABSOLUTE">
+  | <ACTION: "ACTION">
+  | <ADA: "ADA">
+  | <ADD: "ADD">
+  | <ADMIN: "ADMIN">
+  | <AFTER: "AFTER">
+  | <ALWAYS: "ALWAYS">
+  | <ASC: "ASC">
+  | <ASSERTION: "ASSERTION">
+  | <ASSIGNMENT: "ASSIGNMENT">
+  | <ATTRIBUTE: "ATTRIBUTE">
+  | <ATTRIBUTES: "ATTRIBUTES">
+  | <BEFORE: "BEFORE">
+  | <BERNOULLI: "BERNOULLI">
+  | <BREADTH: "BREADTH">
+  | <C: "C">
+  | <CASCADE: "CASCADE">
+  | <CATALOG: "CATALOG">
+  | <CATALOG_NAME: "CATALOG_NAME">
+  | <CHAIN: "CHAIN">
+  | <CHARACTER_SET_CATALOG: "CHARACTER_SET_CATALOG">
+  | <CHARACTER_SET_NAME: "CHARACTER_SET_NAME">
+  | <CHARACTER_SET_SCHEMA: "CHARACTER_SET_SCHEMA">
+  | <CHARACTERISTICS: "CHARACTERISTICS">
+  | <CHARACTERS: "CHARACTERS">
+  | <CLASS_ORIGIN: "CLASS_ORIGIN">
+  | <COBOL: "COBOL">
+  | <COLLATION: "COLLATION">
+  | <COLLATION_CATALOG: "COLLATION_CATALOG">
+  | <COLLATION_NAME: "COLLATION_NAME">
+  | <COLLATION_SCHEMA: "COLLATION_SCHEMA">
+  | <COLUMN_NAME: "COLUMN_NAME">
+  | <COMMAND_FUNCTION: "COMMAND_FUNCTION">
+  | <COMMAND_FUNCTION_CODE: "COMMAND_FUNCTION_CODE">
+  | <COMMITTED: "COMMITTED">
+  | <CONDITION_NUMBER: "CONDITION_NUMBER">
+  | <CONNECTION: "CONNECTION">
+  | <CONNECTION_NAME: "CONNECTION_NAME">
+  | <CONSTRAINT_CATALOG: "CONSTRAINT_CATALOG">
+  | <CONSTRAINT_NAME: "CONSTRAINT_NAME">
+  | <CONSTRAINT_SCHEMA: "CONSTRAINT_SCHEMA">
+  | <CONSTRAINTS: "CONSTRAINTS">
+  | <CONSTRUCTOR: "CONSTRUCTOR">
+  | <CONTAINS: "CONTAINS">
+  | <CONTINUE: "CONTINUE">
+  | <CURSOR_NAME: "CURSOR_NAME">
+  | <DATA: "DATA">
+  | <DATETIME_INTERVAL_CODE: "DATETIME_INTERVAL_CODE">
+  | <DATETIME_INTERVAL_PRECISION: "DATETIME_INTERVAL_PRECISION">
+  | <DEFAULTS: "DEFAULTS">
+  | <DEFERRABLE: "DEFERRABLE">
+  | <DEFERRED: "DEFERRED">
+  | <DEFINED: "DEFINED">
+  | <DEFINER: "DEFINER">
+  | <DEGREE: "DEGREE">
+  | <DEPTH: "DEPTH">
+  | <DERIVED: "DERIVED">
+  | <DESC: "DESC">
+  | <DESCRIPTOR: "DESCRIPTOR">
+  | <DIAGNOSTICS: "DIAGNOSTICS">
+  | <DISPATCH: "DISPATCH">
+  | <DOMAIN: "DOMAIN">
+  | <DYNAMIC_FUNCTION: "DYNAMIC_FUNCTION">
+  | <DYNAMIC_FUNCTION_CODE: "DYNAMIC_FUNCTION_CODE">
+  | <ENFORCED: "ENFORCED">
+  | <EQUALS: "EQUALS">
+  | <EXCLUDE: "EXCLUDE">
+  | <EXCLUDING: "EXCLUDING">
+  | <EXPRESSION: "EXPRESSION">
+  | <FINAL: "FINAL">
+  | <FIRST: "FIRST">
+  | <FLAG: "FLAG">
+  | <FOLLOWING: "FOLLOWING">
+  | <FORTRAN: "FORTRAN">
+  | <FOUND: "FOUND">
+  | <G: "G">
+  | <GENERAL: "GENERAL">
+  | <GENERATED: "GENERATED">
+  | <GO: "GO">
+  | <GOTO: "GOTO">
+  | <GRANTED: "GRANTED">
+  | <HIERARCHY: "HIERARCHY">
+  | <IF: "IF">   // Non-standard
+  | <IGNORE: "IGNORE">
+  | <IMMEDIATE: "IMMEDIATE">
+  | <IMPLEMENTATION: "IMPLEMENTATION">
+  | <INCLUDING: "INCLUDING">
+  | <INCREMENT: "INCREMENT">
+  | <INITIALLY: "INITIALLY">
+  | <INPUT: "INPUT">
+  | <INSTANCE: "INSTANCE">
+  | <INSTANTIABLE: "INSTANTIABLE">
+  | <INSTEAD: "INSTEAD">
+  | <INVOKER: "INVOKER">
+  | <ISOLATION: "ISOLATION">
+  | <K: "K">
+  | <KEY: "KEY">
+  | <KEY_MEMBER: "KEY_MEMBER">
+  | <KEY_TYPE: "KEY_TYPE">
+  | <LAST: "LAST">
+  | <LENGTH: "LENGTH">
+  | <LEVEL: "LEVEL">
+  | <LOCATOR: "LOCATOR">
+  | <M: "M">
+  | <MAP: "MAP">
+  | <MATCHED: "MATCHED">
+  | <MAXVALUE: "MAXVALUE">
+  | <MESSAGE_LENGTH: "MESSAGE_LENGTH">
+  | <MESSAGE_OCTET_LENGTH: "MESSAGE_OCTET_LENGTH">
+  | <MESSAGE_TEXT: "MESSAGE_TEXT">
+  | <MINVALUE: "MINVALUE">
+  | <MORE_: "MORE">
+  | <MUMPS: "MUMPS">
+  | <NAMES: "NAMES">
+  | <NESTING: "NESTING">
+  | <NEXT: "NEXT">
+  | <NFC: "NFC">
+  | <NFD: "NFD">
+  | <NFKC: "NFKC">
+  | <NFKD: "NFKD">
+  | <NORMALIZED: "NORMALIZED">
+  | <NULLABLE: "NULLABLE">
+  | <NULLS: "NULLS">
+  | <NUMBER: "NUMBER">
+  | <OBJECT: "OBJECT">
+  | <OCTETS: "OCTETS">
+  | <OPTION: "OPTION">
+  | <OPTIONS: "OPTIONS">
+  | <ORDERING: "ORDERING">
+  | <ORDINALITY: "ORDINALITY">
+  | <OTHERS: "OTHERS">
+  | <OUTPUT: "OUTPUT">
+  | <OVERRIDING: "OVERRIDING">
+  | <P: "P">
+  | <PAD: "PAD">
+  | <PARAMETER_MODE: "PARAMETER_MODE">
+  | <PARAMETER_NAME: "PARAMETER_NAME">
+  | <PARAMETER_ORDINAL_POSITION: "PARAMETER_ORDINAL_POSITION">
+  | <PARAMETER_SPECIFIC_CATALOG: "PARAMETER_SPECIFIC_CATALOG">
+  | <PARAMETER_SPECIFIC_NAME: "PARAMETER_SPECIFIC_NAME">
+  | <PARAMETER_SPECIFIC_SCHEMA: "PARAMETER_SPECIFIC_SCHEMA">
+  | <PARTIAL: "PARTIAL">
+  | <PASCAL: "PASCAL">
+  | <PATH: "PATH">
+  | <PLACING: "PLACING">
+  | <PLI: "PLI">
+  | <PRECEDING: "PRECEDING">
+  | <PRESERVE: "PRESERVE">
+  | <PRIOR: "PRIOR">
+  | <PRIVILEGES: "PRIVILEGES">
+  | <PROPERTIES: "PROPERTIES">  // Non-standard
+  | <PUBLIC: "PUBLIC">
+  | <READ: "READ">
+  | <RELATIVE: "RELATIVE">
+  | <REPEATABLE: "REPEATABLE">
+  | <RESPECT: "RESPECT">
+  | <RESTART: "RESTART">
+  | <RESTRICT: "RESTRICT">
+  | <RETURNED_CARDINALITY: "RETURNED_CARDINALITY">
+  | <RETURNED_LENGTH: "RETURNED_LENGTH">
+  | <RETURNED_OCTET_LENGTH: "RETURNED_OCTET_LENGTH">
+  | <RETURNED_SQLSTATE: "RETURNED_SQLSTATE">
+  | <ROLE: "ROLE">
+  | <ROUTINE: "ROUTINE">
+  | <ROUTINE_CATALOG: "ROUTINE_CATALOG">
+  | <ROUTINE_NAME: "ROUTINE_NAME">
+  | <ROUTINE_SCHEMA: "ROUTINE_SCHEMA">
+  | <ROW_COUNT: "ROW_COUNT">
+  | <SCALE: "SCALE">
+  | <SCHEMA: "SCHEMA">
+  | <SCHEMA_NAME: "SCHEMA_NAME">
+  | <SCOPE_CATALOG: "SCOPE_CATALOG">
+  | <SCOPE_NAME: "SCOPE_NAME">
+  | <SCOPE_SCHEMA: "SCOPE_SCHEMA">
+  | <SECTION: "SECTION">
+  | <SECURITY: "SECURITY">
+  | <SELF: "SELF">
+  | <SEQUENCE: "SEQUENCE">
+  | <SERIALIZABLE: "SERIALIZABLE">
+  | <SERVER_NAME: "SERVER_NAME">
+  | <SESSION: "SESSION">
+  | <SETS: "SETS">
+  | <SIMPLE: "SIMPLE">
+  | <SIZE: "SIZE">
+  | <SOURCE: "SOURCE">
+  | <SPACE: "SPACE">
+  | <SPECIFIC_NAME: "SPECIFIC_NAME">
+  | <STATE: "STATE">
+  | <STATEMENT: "STATEMENT">
+  | <STRUCTURE: "STRUCTURE">
+  | <STYLE: "STYLE">
+  | <SUBCLASS_ORIGIN: "SUBCLASS_ORIGIN">
+  | <T: "T">
+  | <TABLE_NAME: "TABLE_NAME">
+  | <TEMPORARY: "TEMPORARY">
+  | <TIES: "TIES">
+  | <TOP_LEVEL_COUNT: "TOP_LEVEL_COUNT">
+  | <TRANSACTION: "TRANSACTION">
+  | <TRANSACTION_ACTIVE: "TRANSACTION_ACTIVE">
+  | <TRANSACTIONS_COMMITTED: "TRANSACTIONS_COMMITTED">
+  | <TRANSACTIONS_ROLLED_BACK: "TRANSACTIONS_ROLLED_BACK">
+  | <TRANSFORM: "TRANSFORM">
+  | <TRANSFORMS: "TRANSFORMS">
+  | <TRIGGER_CATALOG: "TRIGGER_CATALOG">
+  | <TRIGGER_NAME: "TRIGGER_NAME">
+  | <TRIGGER_SCHEMA: "TRIGGER_SCHEMA">
+  | <TRY_CAST: "TRY_CAST">  // Non-standard
+  | <TYPE: "TYPE">
+  | <UNBOUNDED: "UNBOUNDED">
+  | <UNCOMMITTED: "UNCOMMITTED">
+  | <UNDER: "UNDER">
+  | <UNNAMED: "UNNAMED">
+  | <USAGE: "USAGE">
+  | <USER_DEFINED_TYPE_CATALOG: "USER_DEFINED_TYPE_CATALOG">
+  | <USER_DEFINED_TYPE_CODE: "USER_DEFINED_TYPE_CODE">
+  | <USER_DEFINED_TYPE_NAME: "USER_DEFINED_TYPE_NAME">
+  | <USER_DEFINED_TYPE_SCHEMA: "USER_DEFINED_TYPE_SCHEMA">
+  | <VIEW: "VIEW">
+  | <WORK: "WORK">
+  | <WRITE: "WRITE">
+  | <ZONE: "ZONE">
+
+
+  // Non-standard
+  // Changed the following reserved words into non-reserved one as lot of users use them as identifiers.
+  | <ABS: "ABS">
+  | <ALL: "ALL">
+  | <ARRAY_AGG: "ARRAY_AGG">
+  | <AT: "AT">
+  | <AVG: "AVG">
+  | <BLOB: "BLOB">
+  | <BOTH: "BOTH">
+  | <CARDINALITY: "CARDINALITY">
+  | <CLOSE: "CLOSE">
+  | <COLUMN: "COLUMN">
+  | <CONDITION: "CONDITION">
+  | <COUNT: "COUNT">
+  | <CUBE: "CUBE">
+  | <CURRENT: "CURRENT">
+  | <CURRENT_CATALOG: "CURRENT_CATALOG">
+  | <CURRENT_DATE: "CURRENT_DATE">
+  | <CURRENT_DEFAULT_TRANSFORM_GROUP: "CURRENT_DEFAULT_TRANSFORM_GROUP">
+  | <CURRENT_PATH: "CURRENT_PATH">
+  | <CURRENT_ROLE: "CURRENT_ROLE">
+  | <CURRENT_SCHEMA: "CURRENT_SCHEMA">
+  | <CURRENT_TIME: "CURRENT_TIME">
+  | <CURRENT_TIMESTAMP: "CURRENT_TIMESTAMP">
+  | <CURRENT_TRANSFORM_GROUP_FOR_TYPE: "CURRENT_TRANSFORM_GROUP_FOR_TYPE">
+  | <CURRENT_USER: "CURRENT_USER">
+  | <CURSOR: "CURSOR">
+  | <CYCLE: "CYCLE">
+  | <DATE: "DATE">
+  | <DAY: "DAY">
+  | <DAYS: "DAYS">
+  | <DEC: "DEC">
+  | <DYNAMIC: "DYNAMIC">
+  | <EXP: "EXP">
+  | <EXTERNAL: "EXTERNAL">
+  | <FILTER: "FILTER">
+  | <FLOOR: "FLOOR">
+  | <FREE: "FREE">
+  | <FUNCTION: "FUNCTION">
+  | <GLOBAL: "GLOBAL">
+  | <HOLD: "HOLD">
+  | <HOUR: "HOUR">
+  | <HOURS: "HOURS">
+  | <IDENTITY: "IDENTITY">
+  | <INDICATOR: "INDICATOR">
+  | <INTERSECTION: "INTERSECTION">
+  | <INTERVAL: "INTERVAL">
+  | <LANGUAGE: "LANGUAGE">
+  | <LEAD: "LEAD">
+  | <LOCAL: "LOCAL">
+  | <LOWER: "LOWER">
+  | <MAX: "MAX">
+  | <MERGE: "MERGE">
+  | <METHOD: "METHOD">
+  | <MIN: "MIN">
+  | <MINUTE: "MINUTE">
+  | <MINUTES: "MINUTES">
+  | <MOD: "MOD">
+  | <MODULE: "MODULE">
+  | <MONTH: "MONTH">
+  | <MONTHS: "MONTHS">
+  | <NAME: "NAME">
+  | <NEW: "NEW">
+  | <NONE: "NONE">
+  | <OCCURRENCE: "OCCURRENCE">
+  | <OFFSET: "OFFSET">
+  | <OLD: "OLD">
+  | <OPEN: "OPEN">
+  | <PARTITION: "PARTITION">
+  | <POSITION: "POSITION">
+  | <POWER: "POWER">
+  | <PRECISION: "PRECISION">
+  | <RANGE: "RANGE">
+  | <RANK: "RANK">
+  | <READS: "READS">
+  | <REF: "REF">
+  | <REFERENCES: "REFERENCES">
+  | <RELEASE: "RELEASE">
+  | <RESULT: "RESULT">
+  | <RETURNS: "RETURNS">
+  | <ROLLUP: "ROLLUP">
+  | <ROW: "ROW">
+  | <ROW_NUMBER: "ROW_NUMBER">
+  | <ROWS: "ROWS">
+  | <SAVEPOINT: "SAVEPOINT">
+  | <SCOPE: "SCOPE">
+  | <SEARCH: "SEARCH">
+  | <SECOND: "SECOND">
+  | <SECONDS: "SECONDS">
+  | <SESSION_USER: "SESSION_USER">
+  | <SQL: "SQL">
+  | <START: "START">
+  | <STATIC: "STATIC">
+  | <SUM: "SUM">
+  | <SYSTEM: "SYSTEM">
+  | <TIME: "TIME">
+  | <TIMESTAMP: "TIMESTAMP">
+  | <TIMEZONE_HOUR: "TIMEZONE_HOUR">
+  | <TIMEZONE_MINUTE: "TIMEZONE_MINUTE">
+  | <TRIGGER: "TRIGGER">
+  | <TRUNCATE: "TRUNCATE">
+  | <UNKNOWN: "UNKNOWN">
+  | <UPDATE: "UPDATE">
+  | <UPPER: "UPPER">
+  | <USER: "USER">
+  | <VALUE: "VALUE">
+  | <VALUES: "VALUES">
+  | <VERSION: "VERSION">
+  | <VERSIONS: "VERSIONS">
+  | <WINDOW: "WINDOW">
+  | <YEAR: "YEAR">
+  | <YEARS: "YEARS">
+
+  // Presto tokens
+  | <COMMENT: "COMMENT">
+  | <DEFAULT_: "DEFAULT">
+  | <USE: "USE">
+  | <LIMIT: "LIMIT">
+  | "NUMERIC_HISTOGRAM"
+  | <REPLACE: "REPLACE">
+  | "HISTOGRAM"
+  | "APPROEX_PERCENTILE"
+  | "MAP_AGG"
+  | "SET_AGG"
+  | "MAP_UNION"
+  | <COUNT_QUOTED: "\"COUNT\"">
+}
+
+<UNREACHABLE>SKIP:
+{
+  // Dummy token to get a value range. Will never be mached:
+  <MAX_NON_RESERVED_WORD: "MAX NON RESERVED WORD">
+}
+<UNREACHABLE>SKIP:
+{
+  // Dummy token to get a value range. Will never be mached. And it should be here positionally - before the first non reserved word
+  <MIN_RESERVED_WORD: "MIN RESERVED WORD">
+}
+
+// reserved words
+TOKEN:
+{
+    <ALLOCATE: "ALLOCATE">
+  | <ALTER: "ALTER">
+  | <AND: "AND">
+  | <ANY: "ANY">
+  | <ARE: "ARE">
+  | <ARRAY: "ARRAY">
+  | <AS: "AS">
+  | <ASENSITIVE: "ASENSITIVE">
+  | <ASYMMETRIC: "ASYMMETRIC">
+  | <ATOMIC: "ATOMIC">
+  | <AUTHORIZATION: "AUTHORIZATION">
+  | <BEGIN: "BEGIN">
+  | <BETWEEN: "BETWEEN">
+  | <BIGINT: "BIGINT">
+  | <BINARY: "BINARY">
+  | <BOOLEAN: "BOOLEAN">
+  | <BY: "BY">
+  | <CALL: "CALL">
+  | <CALLED: "CALLED">
+  | <CASCADED: "CASCADED">
+  | <CASE: "CASE">
+  | <CAST: "CAST">
+  | <CEIL: "CEIL">
+  | <CEILING: "CEILING">
+  | <CHAR: "CHAR">
+  | <CHAR_LENGTH: "CHAR_LENGTH">
+  | <CHARACTER: "CHARACTER">
+  | <CHARACTER_LENGTH: "CHARACTER_LENGTH">
+  | <CHECK: "CHECK">
+  | <CLOB: "CLOB">
+  | <COALESCE: "COALESCE">
+  | <COLLATE: "COLLATE">
+  | <COLLECT: "COLLECT">
+  | <COMMIT: "COMMIT">
+  | <CONNECT: "CONNECT">
+  | <CONSTRAINT: "CONSTRAINT">
+  | <CONVERT: "CONVERT">
+  | <CORR: "CORR">
+  | <CORRESPONDING: "CORRESPONDING">
+  | <COVAR_POP: "COVAR_POP">
+  | <COVAR_SAMP: "COVAR_SAMP">
+  | <CREATE: "CREATE">
+  | <CROSS: "CROSS">
+  | <CUME_DIST: "CUME_DIST">
+  | <DEALLOCATE: "DEALLOCATE">
+  | <DECIMAL: "DECIMAL">
+  | <DECLARE: "DECLARE">
+  | <DELETE: "DELETE">
+  | <DENSE_RANK: "DENSE_RANK">
+  | <DEREF: "DEREF">
+  | <DESCRIBE: "DESCRIBE">
+  | <DETERMINISTIC: "DETERMINISTIC">
+  | <DISCONNECT: "DISCONNECT">
+  | <DISTINCT: "DISTINCT">
+  | <DOUBLE: "DOUBLE">
+  | <DROP: "DROP">
+  | <EACH: "EACH">
+  | <ELEMENT: "ELEMENT">
+  | <ELSE: "ELSE">
+  | <END: "END">
+  | <END_EXEC: "END-EXEC">
+  | <ESCAPE: "ESCAPE">
+  | <EVERY: "EVERY">
+  | <EXCEPT: "EXCEPT">
+  | <EXEC: "EXEC">
+  | <EXECUTE: "EXECUTE">
+  | <EXISTS: "EXISTS">
+  | <EXTRACT: "EXTRACT">
+  | <FALSE: "FALSE">
+  | <FETCH: "FETCH">
+  | <FIRST_VALUE: "FIRST_VALUE">
+  | <FLOAT: "FLOAT">
+  | <FOR: "FOR">
+  | <FOREIGN: "FOREIGN">
+  | <FOREVER: "FOREVER">
+  | <FROM: "FROM">
+  | <FULL: "FULL">
+  | <FUSION: "FUSION">
+  | <GET: "GET">
+  | <GRANT: "GRANT">
+  | <GROUP: "GROUP">
+  | <GROUPING: "GROUPING">
+  | <HAVING: "HAVING">
+  | <IN: "IN">
+  | <INNER: "INNER">
+  | <INOUT: "INOUT">
+  | <INSENSITIVE: "INSENSITIVE">
+  | <INSERT: "INSERT">
+  | <INT: "INT">
+  | <INTEGER: "INTEGER">
+  | <INTERSECT: "INTERSECT">
+  | <INTO: "INTO">
+  | <IS: "IS">
+  | <JOIN: "JOIN">
+  | <KEEP: "KEEP">
+  | <LAG: "LAG">
+  | <LARGE: "LARGE">
+  | <LAST_VALUE: "LAST_VALUE">
+  | <LATERAL: "LATERAL">
+  | <LEADING: "LEADING">
+  | <LEFT: "LEFT">
+  | <LIKE: "LIKE">
+  | <LIKE_REGEX: "LIKE_REGEX">
+  | <LN: "LN">
+  | <LOCALTIME: "LOCALTIME">
+  | <LOCALTIMESTAMP: "LOCALTIMESTAMP">
+  | <MATCH: "MATCH">
+  | <MAX_CARDINALITY: "MAX_CARDINALITY">
+  | <MEMBER: "MEMBER">
+  | <MODIFIES: "MODIFIES">
+  | <MULTISET: "MULTISET">
+  | <NATIONAL: "NATIONAL">
+  | <NATURAL: "NATURAL">
+  | <NCHAR: "NCHAR">
+  | <NCLOB: "NCLOB">
+  | <NO: "NO">
+  | <NORMALIZE: "NORMALIZE">
+  | <NOT: "NOT">
+  | <NTH_VALUE: "NTH_VALUE">
+  | <NTILE: "NTILE">
+  | <NULL_: "NULL">
+  | <NULLIF: "NULLIF">
+  | <NUMERIC: "NUMERIC">
+  | <OCTET_LENGTH: "OCTET_LENGTH">
+  | <OCCURRENCES_REGEX: "OCCURRENCES_REGEX">
+  | <OF: "OF">
+  | <ON: "ON">
+  | <ONLY: "ONLY">
+  | <OR: "OR">
+  | <ORDER: "ORDER">
+  | <OUT: "OUT">
+  | <OUTER: "OUTER">
+  | <OVER: "OVER">
+  | <OVERLAPS: "OVERLAPS">
+  | <OVERLAY: "OVERLAY">
+  | <PARAMETER: "PARAMETER">
+  | <PERCENT_RANK: "PERCENT_RANK">
+  | <PERCENTILE_CONT: "PERCENTILE_CONT">
+  | <PERCENTILE_DISC: "PERCENTILE_DISC">
+  | <POSITION_REGEX: "POSITION_REGEX">
+  | <PREPARE: "PREPARE">
+  | <PRIMARY: "PRIMARY">
+  | <PROCEDURE: "PROCEDURE">
+  | <REAL: "REAL">
+  | <RECURSIVE: "RECURSIVE">
+  | <REFERENCING: "REFERENCING">
+  | <REGR_AVGX: "REGR_AVGX">
+  | <REGR_AVGY: "REGR_AVGY">
+  | <REGR_COUNT: "REGR_COUNT">
+  | <REGR_INTERCEPT: "REGR_INTERCEPT">
+  | <REGR_R2: "REGR_R2">
+  | <REGR_SLOPE: "REGR_SLOPE">
+  | <REGR_SXX: "REGR_SXX">
+  | <REGR_SXY: "REGR_SXY">
+  | <REGR_SYY: "REGR_SYY">
+  | <RETURN: "RETURN">
+  | <REVOKE: "REVOKE">
+  | <RIGHT: "RIGHT">
+  | <ROLLBACK: "ROLLBACK">
+  | <SCROLL: "SCROLL">
+  | <SELECT: "SELECT">
+  | <SENSITIVE: "SENSITIVE">
+  | <SET: "SET">
+  | <SIMILAR: "SIMILAR">
+  | <SMALLINT: "SMALLINT">
+  | <SOME: "SOME">
+  | <SPECIFIC: "SPECIFIC">
+  | <SPECIFICTYPE: "SPECIFICTYPE">
+  | <SQLEXCEPTION: "SQLEXCEPTION">
+  | <SQLSTATE: "SQLSTATE">
+  | <SQLWARNING: "SQLWARNING">
+  | <SQRT: "SQRT">
+  | <STDDEV_POP: "STDDEV_POP">
+  | <STDDEV_SAMP: "STDDEV_SAMP">
+  | <SUBMULTISET: "SUBMULTISET">
+  | <SUBSTRING: "SUBSTRING">
+  | <SUBSTRING_REGEX: "SUBSTRING_REGEX">
+  | <SYMMETRIC: "SYMMETRIC">
+  | <SYSTEM_USER: "SYSTEM_USER">
+  | <TABLE: "TABLE">
+  | <TABLESAMPLE: "TABLESAMPLE">
+  | <THEN: "THEN">
+  | <TO: "TO">
+  | <TRAILING: "TRAILING">
+  | <TRANSLATE: "TRANSLATE">
+  | <TRANSLATE_REGEX: "TRANSLATE_REGEX">
+  | <TRANSLATION: "TRANSLATION">
+  | <TREAT: "TREAT">
+  | <TRIM: "TRIM">
+  | <TRIM_ARRAY: "TRIM_ARRAY">
+  | <TRUE: "TRUE">
+  | <UESCAPE: "UESCAPE">
+  | <UNION: "UNION">
+  | <UNIQUE: "UNIQUE">
+  | <UNNEST: "UNNEST">
+  | <USING: "USING">
+  | <VAR_POP: "VAR_POP">
+  | <VAR_SAMP: "VAR_SAMP">
+  | <VARBINARY: "VARBINARY">
+  | <VARCHAR: "VARCHAR">
+  | <VARYING: "VARYING">
+  | <VERSIONING: "VERSIONING">
+  | <WHEN: "WHEN">
+  | <WHENEVER: "WHENEVER">
+  | <WHERE: "WHERE">
+  | <WIDTH_BUCKET: "WIDTH_BUCKET">
+  | <WITH: "WITH">
+  | <WITHIN: "WITHIN">
+  | <WITHOUT: "WITHOUT">
+}
+
+<UNREACHABLE>SKIP:
+{
+  // Dummy token to get a value range. Will never be mached:
+  <MAX_RESERVED_WORD: "MAX RESERVED WORD">
+}
+
+//TODO(kaikalur): create a separate section for all special chars
+TOKEN:
+{
+    <semicolon: ";">
+  | <lparen: "(">
+  | <rparen: ")">
+  | <underscore: "_">
+}
+void left_bracket_or_trigraph():
+{}
+{
+    "["
+  | "??("
+}
+
+void right_bracket_or_trigraph():
+{}
+{
+    "]"
+  | "??)"
+}
+
+void literal():
+{}
+{
+    signed_numeric_literal()
+  | general_literal()
+}
+
+void signed_numeric_literal():
+{}
+{
+    unsigned_numeric_literal()
+  | ( ( "+" | "-" ) unsigned_numeric_literal() ) #UnaryExpression(1)
+}
+
+void unsigned_literal():
+{}
+{
+    unsigned_numeric_literal()
+  | general_literal()
+}
+
+void unsigned_numeric_literal() #UnsignedNumericLiteral:
+{}
+{
+    exact_numeric_literal()
+  | <approximate_numeric_literal>
+}
+
+void exact_numeric_literal():
+{}
+{
+    <unsigned_integer>
+  | <float_literal>
+}
+
+void general_literal():
+{}
+{
+    character_string_literal()
+  | <national_character_string_literal>
+  | Unicode_character_string_literal()
+  | <binary_string_literal>
+  | datetime_literal()
+  | interval_literal()
+  | boolean_literal()
+}
+
+
+void character_string_literal() #CharStringLiteral:
+{}
+{
+/*
+  ( "_" character_set_specification()  )? "'" ( <character_representation> )* "'"
+  ( //TODO(kaikalur) - fixit <separator>
+   "'" ( <character_representation>  )* "'"
+  )*
+*/
+  ( "_" character_set_specification() )? ( <quoted_string> )+
+}
+
+void Unicode_character_string_literal() #CharStringLiteral:
+{}
+{
+    ( "_" character_set_specification()  )? <unicode_literal>
+}
+
+void datetime_literal():
+{}
+{
+    date_literal()
+  | time_literal()
+  | timestamp_literal()
+}
+
+void date_literal() #DateLiteral:
+{}
+{
+    "DATE" character_string_literal()  // TODO(kaikalur): fix it <date_string>
+}
+
+void time_literal() #TimeLiteral:
+{}
+{
+    "TIME" character_string_literal() // TOD(sreeni): fixit <time_string>
+}
+
+void timestamp_literal() #TimestampLiteral:
+{}
+{
+    "TIMESTAMP" character_string_literal() // TOD(sreeni): fixit <timestamp_string>
+}
+
+void interval_literal() #IntervalLiteral:
+{}
+{
+    "INTERVAL" [ "+" | "-" ]
+    character_string_literal() // TOD(sreeni): fixit interval_string()
+    interval_qualifier()
+}
+
+void boolean_literal():
+{}
+{
+  (
+    "TRUE"
+  | "FALSE"
+  ) #BooleanLiteral
+  | "UNKNOWN" #Unsupported
+}
+
+void identifier() #Identifier:
+{}
+{
+  (
+    actual_identifier()
+  | weird_identifiers()  // Presto allow _ and "" as an identifier names - yikes!
+  )
+
+  [ identifier_suffix_chain() ]
+}
+
+void actual_identifier():
+{}
+{
+    <regular_identifier>
+  | <delimited_identifier>
+  | <Unicode_delimited_identifier>
+  | LOOKAHEAD(1, { IsIdNonReservedWord() }) non_reserved_word()
+}
+
+void table_name() #TableName:
+{}
+{
+    //TODO(kaikalur): For parsing convenience: local_or_schema_qualified_name()
+    // To elminate complexlookahead, we make the identitifer chain to flow left to right
+    identifier_chain()
+}
+
+void schema_name() #SchemaName:
+{}
+{
+    //TODO(kaikalur): For parsing convenience: [ LOOKAHEAD(2) catalog_name() "." ] identifier()
+    // To elminate complexlookahead, we make the identitifer chain to flow left to right
+    identifier_chain()
+}
+
+void catalog_name() #CatalogName:
+{}
+{
+    identifier()
+}
+
+void schema_qualified_name() #SchemaQualifiedName:
+{}
+{
+    //TODO(kaikalur): For parsing convenience: [ LOOKAHEAD(2) schema_name() "." ] identifier()
+    // To elminate complexlookahead, we make the identitifer chain to flow left to right
+    identifier_chain()
+}
+
+void local_or_schema_qualified_name():
+{}
+{
+    //TODO(kaikalur): For parsing convenience: [ LOOKAHEAD(2) local_or_schema_qualifier() "." ] identifier()
+    // To elminate complexlookahead, we make the identitifer chain to flow left to right
+    identifier_chain()
+}
+
+void local_or_schema_qualifier():
+{}
+{
+    local_qualifier()
+  | schema_name()
+}
+
+void cursor_name():
+{}
+{
+    // TODO(kaikalur): fixit --[ local_qualifier() "." ] identifier()
+    // To elminate complexlookahead, we make the identitifer chain to flow left to right
+    identifier_chain()
+}
+
+void local_qualifier():
+{}
+{
+    "MODULE"
+}
+
+void host_parameter_name():
+{}
+{
+     ":" identifier()
+}
+
+void external_routine_name():
+{}
+{
+    identifier()
+  | ( character_string_literal() )#Unsupported
+}
+
+void character_set_name() #Unsupported:
+{}
+{
+    [ schema_name() "." ] <SQL_language_identifier>
+}
+
+void schema_resolved_user_defined_type_name():
+{}
+{
+    user_defined_type_name()
+}
+
+void user_defined_type_name():
+{}
+{
+    // TODO(kaikalur): fixit -- [ schema_name() "." ] identifier()
+    // To elminate complexlookahead, we make the identitifer chain to flow left to right
+    identifier_chain()
+}
+
+void SQL_identifier():
+{}
+{
+    identifier()
+  | extended_identifier()
+}
+
+void extended_identifier():
+{}
+{
+    [ scope_option() ] simple_value_specification()
+}
+
+void dynamic_cursor_name():
+{}
+{
+    cursor_name()
+  | extended_cursor_name()
+}
+
+void extended_cursor_name():
+{}
+{
+    [ scope_option() ] simple_value_specification()
+}
+
+void descriptor_name():
+{}
+{
+    identifier()
+  | extended_descriptor_name()
+}
+
+void extended_descriptor_name():
+{}
+{
+    [ scope_option() ] simple_value_specification()
+}
+
+void scope_option() #Unsupported:
+{}
+{
+    "GLOBAL"
+  | "LOCAL"
+}
+
+void data_type():
+{}
+{
+  (
+      predefined_type()
+    | row_type()
+    | reference_type()
+    | presto_generic_type()
+    | path_resolved_user_defined_type_name()
+  )
+
+  [ collection_type() ]
+}
+
+void predefined_type() #PredefinedType:
+{}
+{
+    character_string_type() [ "CHARACTER" "SET" character_set_specification() ]
+    [ collate_clause() ]
+  | national_character_string_type() [ collate_clause() ]
+  | binary_string_type()
+  | numeric_type()
+  | boolean_type()
+  | datetime_type()
+  | interval_type()
+}
+
+void character_string_type():
+{}
+{
+    "CHARACTER" [ "(" character_length() ")" ]
+  | "CHAR" [ "(" character_length() ")" ]
+  | "CHARACTER" "VARYING" "(" character_length() ")"
+  | "CHAR" "VARYING" "(" character_length() ")"
+  | "VARCHAR" [ "(" character_length() ")" ]  // Non-standard length optional
+  | character_large_object_type()
+}
+
+void character_large_object_type():
+{}
+{
+    "CHARACTER" "LARGE" "OBJECT" [ "(" character_large_object_length() ")" ]
+  | "CHAR" "LARGE" "OBJECT" [ "(" character_large_object_length() ")" ]
+  | "CLOB" [ "(" character_large_object_length() ")" ]
+}
+
+void national_character_string_type():
+{}
+{
+    "NATIONAL" "CHARACTER" [ "(" character_length() ")" ]
+  | "NATIONAL" "CHAR" [ "(" character_length() ")" ]
+  | "NCHAR" [ "(" character_length() ")" ]
+  | "NATIONAL" "CHARACTER" "VARYING" "(" character_length() ")"
+  | "NATIONAL" "CHAR" "VARYING" "(" character_length() ")"
+  | "NCHAR" "VARYING" "(" character_length() ")"
+  | national_character_large_object_type()
+}
+
+void national_character_large_object_type():
+{}
+{
+    "NATIONAL" "CHARACTER" "LARGE" "OBJECT" [ "(" character_large_object_length() ")" ]
+  | "NCHAR" "LARGE" "OBJECT" [ "(" character_large_object_length() ")" ]
+  | "NCLOB" [ "(" character_large_object_length() ")" ]
+}
+
+void binary_string_type():
+{}
+{
+    "BINARY" [ "(" <unsigned_integer> ")" ]
+  | "BINARY" "VARYING" "(" <unsigned_integer> ")"
+  | "VARBINARY" "(" <unsigned_integer> ")"
+  | varbinary()
+  | binary_large_object_string_type()
+}
+
+void binary_large_object_string_type():
+{}
+{
+    "BINARY" "LARGE" "OBJECT" [ "(" large_object_length() ")" ]
+  | "BLOB" [ "(" large_object_length() ")" ]
+}
+
+void numeric_type():
+{}
+{
+    exact_numeric_type()
+  | approximate_numeric_type()
+}
+
+void exact_numeric_type():
+{}
+{
+    "NUMERIC" [ "(" <unsigned_integer> [ "," <unsigned_integer> ] ")" ]
+  | "DECIMAL" [ "(" <unsigned_integer> [ "," <unsigned_integer> ] ")" ]
+  | "DEC" [ "(" <unsigned_integer> [ "," <unsigned_integer> ] ")" ]
+  | "SMALLINT"
+  | "INTEGER"
+  | "INT"
+  | "BIGINT"
+}
+
+void approximate_numeric_type():
+{}
+{
+    "FLOAT" [ "(" <unsigned_integer> ")" ]
+  | "REAL"
+  | "DOUBLE"
+    [ "PRECISION" ]  // Non-standard
+}
+
+void character_length():
+{}
+{
+    <unsigned_integer> [ char_length_units() ]
+}
+
+void large_object_length():
+{}
+{
+    <unsigned_integer> [ <multiplier> ]
+  | <large_object_length_token>
+}
+
+void character_large_object_length():
+{}
+{
+    large_object_length() [ char_length_units() ]
+}
+
+void char_length_units():
+{}
+{
+    "CHARACTERS"
+  | "OCTETS"
+}
+
+void boolean_type():
+{}
+{
+    "BOOLEAN"
+}
+
+void datetime_type():
+{}
+{
+    "DATE"
+  | "TIME" [ "(" <unsigned_integer> ")" ] [ with_or_without_time_zone() ]
+  | "TIMESTAMP" [ "(" <unsigned_integer> ")" ]
+    [ with_or_without_time_zone() ]
+}
+
+void with_or_without_time_zone():
+{}
+{
+    "WITH" "TIME" "ZONE"
+  | "WITHOUT" "TIME" "ZONE"
+}
+
+void interval_type() #Unsupported:
+{}
+{
+    "INTERVAL" interval_qualifier()
+}
+
+void row_type() #RowType:
+{}
+{
+    "ROW" row_type_body()
+}
+
+void row_type_body():
+{}
+{
+     "(" field_definition() ( "," field_definition() )* ")"
+}
+
+void reference_type() #Unsupported:
+{}
+{
+    "REF" "(" referenced_type() ")" [ scope_clause() ]
+}
+
+void scope_clause():
+{}
+{
+    "SCOPE" table_name()
+}
+
+void referenced_type():
+{}
+{
+    path_resolved_user_defined_type_name()
+}
+
+void path_resolved_user_defined_type_name():
+{}
+{
+    user_defined_type_name()
+}
+
+void collection_type():
+{}
+{
+    array_type()
+  | multiset_type()
+}
+
+void array_type() #ArrayType():
+{}
+{
+    { PushNode(PopNode()); }
+    "ARRAY"
+    [ left_bracket_or_trigraph() <unsigned_integer> right_bracket_or_trigraph() ]
+}
+
+void multiset_type() #Unsupported():
+{}
+{
+    { PushNode(PopNode()); }
+    "MULTISET"
+}
+
+void field_definition() #FieldDefinition:
+{}
+{
+    identifier() data_type()
+}
+
+void value_expression_primary():
+{}
+{
+    parenthesized_value_expression()
+  | nonparenthesized_value_expression_primary()
+}
+
+void parenthesized_value_expression():
+{}
+{
+  (   "(" value_expression()
+      ( "," value_expression() )*    // for row_value
+     ")"
+  ) #ParenthesizedExpression()
+
+  ( primary_suffix() )*
+}
+
+void nonparenthesized_value_expression_primary():
+{}
+{
+    contextually_typed_value_specification()
+  | (
+      set_function_specification()
+    | subquery()
+    | case_expression()
+    | cast_specification()
+    | subtype_treatment()
+    | new_specification()
+    | reference_resolution()
+    | collection_value_constructor()
+    | multiset_element_reference()
+    | next_value_expression()
+    // | routine_invocation()  -- handled by method invocation below
+    | window_function_type()
+    | "(" column_name_list() ")" // Non-standard
+    | unsigned_value_specification()
+    | column_reference()
+    )
+
+    ( primary_suffix() )*
+}
+
+void primary_suffix():
+{}
+{
+  { PushNode(PopNode()); }
+  (
+    field_reference()
+  | attribute_or_method_reference()
+  | method_invocation()
+  | window_function()
+  | array_element_reference()
+  | static_method_invocation()
+  )
+}
+  
+void collection_value_constructor():
+{}
+{
+    array_value_constructor()
+  | multiset_value_constructor()
+}
+
+void value_specification():
+{}
+{
+    literal()
+  | general_value_specification()
+}
+
+void unsigned_value_specification():
+{}
+{
+    unsigned_literal()
+  | general_value_specification()
+}
+
+void general_value_specification():
+{}
+{
+    identifier_chain()
+  |
+  (
+      "CURRENT_USER"
+    | "USER"
+  ) #BuiltinValue
+
+  |
+  (
+      "?"
+    | host_parameter_name()
+    | current_collation_specification()
+    | "SESSION_USER"
+    | "SYSTEM_USER"
+    | "CURRENT_CATALOG"
+    | "CURRENT_PATH"
+    | "CURRENT_ROLE"
+    | "CURRENT_SCHEMA"
+    | "VALUE"
+    | "CURRENT_DEFAULT_TRANSFORM_GROUP"
+    | "CURRENT_TRANSFORM_GROUP_FOR_TYPE" path_resolved_user_defined_type_name()
+  ) #Unsupported
+
+  //TODO(kaikalur): fixit
+  //| embedded_variable_specification()
+  //
+}
+
+void simple_value_specification():
+{}
+{
+    literal()
+  | identifier_chain()
+
+  // TODO(kaikalur): fix the next two
+  | host_parameter_name()
+  //| embedded_variable_name()
+}
+
+void target_specification() #Unsupported:
+{}
+{
+  (
+    identifier_chain()
+  | column_reference()
+  )
+
+  [
+    target_array_element_specification()
+  | "?"
+  ]
+
+  // TODO(kaikalur): fix the next two lines
+  //| embedded_variable_specification()
+  //| host_parameter_specification()
+}
+
+void simple_target_specification() #Unsupported:
+{}
+{
+    identifier_chain()
+  | column_reference()
+
+  //TODO(kaikalur): fix the next two
+  //| embedded_variable_name()
+  //| host_parameter_name()
+}
+
+void target_array_element_specification() #Unsupported:
+{}
+{
+    left_bracket_or_trigraph() simple_value_specification() right_bracket_or_trigraph()
+}
+
+void current_collation_specification() #Unsupported:
+{}
+{
+    "COLLATION" "FOR" "(" string_value_expression() ")"
+}
+
+void contextually_typed_value_specification():
+{}
+{
+    implicitly_typed_value_specification()
+  | ( "DEFAULT" )#Unsupported
+}
+
+void implicitly_typed_value_specification():
+{}
+{
+    ( "NULL" )#NullLiteral
+  | empty_specification()
+}
+
+void empty_specification():
+{}
+{
+    ( "ARRAY" left_bracket_or_trigraph() right_bracket_or_trigraph() )#ArrayLiteral
+  | ( "MULTISET" left_bracket_or_trigraph() right_bracket_or_trigraph() )#Unsupported
+}
+
+void identifier_chain() #QualifiedName(>1):
+{}
+{
+    identifier() ( "." identifier() )*
+}
+
+void column_reference():
+{}
+{
+    identifier_chain()
+  | ( "MODULE" "." identifier() "." identifier() )#Unsupported
+}
+
+void set_function_specification():
+{}
+{
+    aggregate_function()
+  | grouping_operation()
+}
+
+void grouping_operation() #GroupingOperation:
+{}
+{
+    "GROUPING" "(" column_reference() ( "," column_reference() )* ")"
+}
+
+void window_function() #WindowFunction(2):
+{}
+{
+    // TODO(kaikalur): fixit -- window_function_type() "OVER" window_name_or_specification()
+    "OVER" window_name_or_specification()
+}
+
+void window_function_type() :
+{}
+{
+    rank_function_type() "(" ")"
+  | ( "ROW_NUMBER" "(" ")" )#RowNumber
+  | aggregate_function()
+  | ntile_function()
+  | lead_or_lag_function()
+  | first_or_last_value_function()
+  | nth_value_function()
+}
+
+void rank_function_type() #RankFunction:
+{}
+{
+    "RANK"
+  | "DENSE_RANK"
+  | "PERCENT_RANK"
+  | "CUME_DIST"
+}
+
+void ntile_function() #NtileFunction:
+{}
+{
+    "NTILE" "(" number_of_tiles() ")"
+}
+
+void number_of_tiles():
+{}
+{
+    // TODO(kaikalur) - generalize simple_value_specification()
+    value_expression()
+  | ( "?" )#Unsupported()
+}
+
+void lead_or_lag_function() #LeadOrLag:
+{}
+{
+    lead_or_lag()
+    "(" value_expression()
+    // Generalized below [ "," exact_numeric_literal() [ "," value_expression() ] ]
+    [ "," value_expression() [ "," value_expression() ] ]  // Non-standard
+    ")"
+    [ null_treatment() ]
+}
+
+void lead_or_lag():
+{}
+{
+    "LEAD" | "LAG"
+}
+
+void null_treatment() #NullTreatment:
+{}
+{
+    "RESPECT" "NULLS" | "IGNORE" "NULLS"
+}
+
+void first_or_last_value_function() #FirstOrLastValueFunction:
+{}
+{
+    first_or_last_value() "(" value_expression() ")" [ null_treatment() ]
+}
+
+void first_or_last_value():
+{}
+{
+    "FIRST_VALUE" | "LAST_VALUE"
+}
+
+void nth_value_function() #Unsupported:
+{}
+{
+    "NTH_VALUE" "(" value_expression() "," nth_row() ")" [ from_first_or_last() ] [ null_treatment() ]
+}
+
+void nth_row():
+{}
+{
+    simple_value_specification()
+  | ( "?" )#Unsupported
+}
+
+void from_first_or_last():
+{}
+{
+    "FROM" "FIRST"
+  | "FROM" "LAST"
+}
+
+void window_name_or_specification():
+{}
+{
+    in_line_window_specification()
+  | identifier()
+}
+
+void in_line_window_specification():
+{}
+{
+    window_specification()
+}
+
+void case_expression():
+{}
+{
+    case_abbreviation()
+  | case_specification()
+}
+
+void case_abbreviation():
+{}
+{
+    ( "NULLIF" "(" value_expression() "," value_expression() ")" )#NullIf
+  | ( "COALESCE" "(" value_expression() ( "," value_expression() )+ ")" )#Coalesce
+}
+
+void case_specification():
+{}
+{
+    simple_case()
+  | searched_case()
+}
+
+void simple_case() #CaseExpression:
+{}
+{
+    "CASE" case_operand() ( simple_when_clause() )+ [ else_clause() ] "END"
+}
+
+void searched_case() #CaseExpression:
+{}
+{
+    "CASE" ( searched_when_clause() )+ [ else_clause() ] "END"
+}
+
+void simple_when_clause() #WhenClause:
+{}
+{
+    "WHEN" when_operand_list() "THEN" result()
+}
+
+void searched_when_clause() #WhenClause:
+{}
+{
+    "WHEN" search_condition() "THEN" result()
+}
+
+void else_clause() #ElseClause:
+{}
+{
+    "ELSE" result()
+}
+
+void case_operand():
+{}
+{
+    row_value_predicand()
+  | overlaps_predicate_part_1()
+}
+
+void when_operand_list():
+{}
+{
+    when_operand() ( "," when_operand() )*
+}
+
+void when_operand() #WhenOperand:
+{}
+{
+    // We push a dummy operand so the binary expressions are built properly
+    ( {  } )#SearchedCaseOperand(true)
+  (
+    row_value_predicand()
+  | comparison_predicate_part_2()
+  | between_predicate_part_2()
+  | in_predicate_part_2()
+  | character_like_predicate_part_2()
+  | octet_like_predicate_part_2()
+  | similar_predicate_part_2()
+  | regex_like_predicate_part_2()
+  | null_predicate_part_2()
+  | quantified_comparison_predicate_part_2()
+  | normalized_predicate_part_2()
+  | match_predicate_part_2()
+  | overlaps_predicate_part_2()
+  | distinct_predicate_part_2()
+  | member_predicate_part_2()
+  | submultiset_predicate_part_2()
+  | set_predicate_part_2()
+  | type_predicate_part_2()
+  )
+}
+
+void result():
+{}
+{
+    value_expression()
+  | ( "NULL" )#NullLiteral
+}
+
+void cast_specification() #CastExpression:
+{}
+{
+    "CAST" "(" cast_operand() "AS" cast_target() ")"
+  | try_cast()
+}
+
+void cast_operand():
+{}
+{
+    value_expression()
+  | implicitly_typed_value_specification()
+}
+
+void cast_target():
+{}
+{
+    data_type()
+  | schema_qualified_name()
+}
+
+void next_value_expression() #NextValueFor:
+{}
+{
+    "NEXT" "VALUE" "FOR" schema_qualified_name()
+}
+
+void field_reference() #FieldReference(2):
+{}
+{
+    // TODO(kaikalur): fixit -- value_expression_primary() "." identifier()
+    "." identifier()
+}
+
+void subtype_treatment() #Unsupported:
+{}
+{
+    "TREAT" "(" value_expression() "AS" target_subtype() ")"
+}
+
+void target_subtype():
+{}
+{
+    path_resolved_user_defined_type_name()
+  | reference_type()
+}
+
+void method_invocation():
+{}
+{
+   ( ( direct_invocation() #FunctionCall(2) ) [ { PushNode(PopNode()); } udaf_filter() #AggregationFunction(2) ] )
+  //| direct_invocation() #FunctionCall(2)
+  | generalized_invocation()
+}
+
+void direct_invocation():
+{}
+{
+    // TODO(kaikalur): fixit --  value_expression_primary() "." identifier() [ SQL_argument_list() ]
+    SQL_argument_list()
+}
+
+void generalized_invocation() #FunctionCall(2):
+{}
+{
+     // "(" value_expression_primary() "AS" data_type() ")"
+     ( "." identifier() )#QualifiedName(2) [ SQL_argument_list() ]
+}
+
+
+void static_method_invocation() #Unsupported:
+{}
+{
+    // TODO(kaikalur): fixit - path_resolved_user_defined_type_name()  "::"  identifier()
+    "::"  identifier()
+    [ SQL_argument_list() ]
+}
+
+void new_specification() #Unsupported:
+{}
+{
+    "NEW" path_resolved_user_defined_type_name() SQL_argument_list()
+}
+
+void new_invocation() #Unused:
+{}
+{
+    method_invocation()
+  | routine_invocation()
+}
+
+void attribute_or_method_reference():
+{}
+{
+    // TODO(kaikalur): fixit -- value_expression_primary() "->" identifier()
+    // We treat everything as lambda for now.
+    // ( "->" identifier() [ SQL_argument_list() ] )#Lambda(>1)
+    ( lambda_body() )#Lambda(2)
+}
+
+void dereference_operation() #Unsupported:
+{}
+{
+    reference_value_expression() "->" identifier()
+}
+
+void reference_resolution() #Unsupported:
+{}
+{
+    "DEREF" "(" reference_value_expression() ")"
+}
+
+void array_element_reference() #ArrayElement(2):
+{}
+{
+    // TODO(kaikalur): fixit -- array_value_expression()
+    left_bracket_or_trigraph() value_expression() right_bracket_or_trigraph()
+}
+
+void multiset_element_reference() #Unsupported:
+{}
+{
+    "ELEMENT" "(" multiset_value_expression() ")"
+}
+
+void value_expression():
+{}
+{
+    boolean_value_expression()
+  | common_value_expression()
+  | row_value_expression()
+}
+
+void common_value_expression():
+{}
+{
+    numeric_value_expression()
+  | string_value_expression()
+  | datetime_value_expression()
+  | interval_value_expression()
+  | user_defined_type_value_expression()
+  | reference_value_expression()
+  | collection_value_expression()
+}
+
+void user_defined_type_value_expression():
+{}
+{
+    value_expression_primary()
+}
+
+void reference_value_expression():
+{}
+{
+    value_expression_primary()
+}
+
+void collection_value_expression():
+{}
+{
+    array_value_expression()
+  | multiset_value_expression()
+}
+
+void numeric_value_expression():
+{}
+{
+    term()
+    (
+      { PushNode(PopNode()); } <PLUS: "+">  term() #AdditiveExpression(2)
+    | { PushNode(PopNode()); } <MINUS: "-">  term() #AdditiveExpression(2)
+    )*
+}
+
+void term():
+{}
+{
+    factor()
+    (
+      { PushNode(PopNode()); } <STAR: "*"> factor() #MultiplicativeExpression(2)
+    | { PushNode(PopNode()); } <DIV: "/"> factor() #MultiplicativeExpression(2)
+    | { PushNode(PopNode()); } percent_operator() factor() #MultiplicativeExpression(2)
+    )*
+}
+
+void factor():
+{}
+{
+    ( ( "+" | "-" ) numeric_primary() )#UnaryExpression(1)
+  | numeric_primary()
+}
+
+void numeric_primary():
+{}
+{
+    numeric_value_function()
+  | character_value_expression()
+}
+
+void numeric_value_function() #BuiltinFunctionCall:
+{}
+{
+  // Builtin function calls are weird in that the name is a keyword and then a ( expressions ) so we open a new scope and just make an ArgumentList
+  // so that it will be just like a FunctionCall
+  (
+    position_expression()
+  | regex_occurrences_function()
+  | regex_position_expression()
+  | extract_expression()
+  | length_expression()
+  | cardinality_expression()
+  | max_cardinality_expression()
+  | absolute_value_expression()
+  | modulus_expression()
+  | natural_logarithm()
+  | exponential_function()
+  | power_function()
+  | square_root()
+  | floor_function()
+  | ceiling_function()
+  | width_bucket_function()
+  ) #ArgumentList(>0)
+}
+
+void position_expression():
+{}
+{
+    character_position_expression()
+  | binary_position_expression()
+}
+
+void regex_occurrences_function() #Unsupported:
+{}
+{
+    "OCCURRENCES_REGEX" "("
+    character_value_expression() [ "FLAG" character_value_expression() ]
+    "IN" character_value_expression()
+    [ "FROM" numeric_value_expression() ]
+    [ "USING" char_length_units() ]
+     ")"
+}
+
+void regex_position_expression() #Unsupported:
+{}
+{
+    "POSITION_REGEX" "("
+    [ regex_position_start_or_after() ]
+    character_value_expression() [ "FLAG" character_value_expression() ]
+    "IN" character_value_expression()
+    [ "FROM" numeric_value_expression() ]
+    [ "USING" char_length_units() ]
+    [ "OCCURRENCE" numeric_value_expression() ]
+    [ "GROUP" numeric_value_expression() ]
+     ")"
+}
+
+void regex_position_start_or_after():
+{}
+{
+    "START"
+  | "AFTER"
+}
+
+void character_position_expression():
+{}
+{
+    "POSITION" "(" character_value_expression() "IN" character_value_expression()
+    [ ( "USING" char_length_units() ) #Unsupported ] ")"
+}
+
+void binary_position_expression():
+{}
+{
+    "POSITION" "(" binary_value_expression() "IN" binary_value_expression() ")"
+}
+
+void length_expression():
+{}
+{
+    char_length_expression()
+  | octet_length_expression()
+}
+
+void char_length_expression():
+{}
+{
+    ( "CHAR_LENGTH" | "CHARACTER_LENGTH" ) "(" character_value_expression()
+    [ ( "USING" char_length_units() ) #Unsupported ] ")"
+}
+
+void octet_length_expression() #Unsupported:
+{}
+{
+    "OCTET_LENGTH" "(" string_value_expression() ")"
+}
+
+void extract_expression():
+{}
+{
+    "EXTRACT" "(" extract_field() "FROM" extract_source() ")"
+}
+
+void extract_field():
+{}
+{
+    primary_datetime_field()
+  | time_zone_field()
+}
+
+void time_zone_field() #TimeZoneField:
+{}
+{
+    "TIMEZONE_HOUR"
+  | "TIMEZONE_MINUTE"
+}
+
+void extract_source():
+{}
+{
+    datetime_value_expression()
+  | interval_value_expression()
+}
+
+void cardinality_expression():
+{}
+{
+    "CARDINALITY" "(" collection_value_expression() ")"
+}
+
+void max_cardinality_expression() #Unsupported:
+{}
+{
+    "MAX_CARDINALITY" "(" array_value_expression() ")"
+}
+
+void absolute_value_expression():
+{}
+{
+    "ABS" "(" numeric_value_expression() ")"
+}
+
+void modulus_expression():
+{}
+{
+    "MOD" "(" numeric_value_expression() "," numeric_value_expression() ")"
+}
+
+void natural_logarithm():
+{}
+{
+    "LN" "(" numeric_value_expression() ")"
+}
+
+void exponential_function():
+{}
+{
+    "EXP" "(" numeric_value_expression() ")"
+}
+
+void power_function():
+{}
+{
+    "POWER" "(" numeric_value_expression() "," numeric_value_expression() ")"
+}
+
+void square_root():
+{}
+{
+    "SQRT" "(" numeric_value_expression() ")"
+}
+
+void floor_function():
+{}
+{
+    "FLOOR" "(" numeric_value_expression() ")"
+}
+
+void ceiling_function():
+{}
+{
+    ( "CEIL" | "CEILING" ) "(" numeric_value_expression() ")"
+}
+
+void width_bucket_function():
+{}
+{
+    "WIDTH_BUCKET" "(" numeric_value_expression() "," numeric_value_expression()
+    [ "," numeric_value_expression() "," numeric_value_expression() ] // Non-standard optional
+    ")"
+}
+
+void string_value_expression():
+{}
+{
+    character_value_expression()
+  | binary_value_expression()
+}
+
+void character_value_expression() #Concatenation(>1):
+{}
+{
+    character_factor() ( concatenation() )*
+}
+
+void concatenation():
+{}
+{
+    // TODO(kaikalur): fixit -- character_value_expression()  "||"  character_factor()
+    "||"  character_factor()
+}
+
+void character_factor():
+{}
+{
+    character_primary() [ ( collate_clause() )#Unsupported ]
+}
+
+void character_primary():
+{}
+{
+    string_value_function()
+  | binary_value_expression()
+}
+
+void binary_value_expression() #Concatenation(>1):
+{}
+{
+    binary_primary() ( binary_concatenation() )*
+}
+
+void binary_primary():
+{}
+{
+    string_value_function()
+  | datetime_value_expression()
+}
+
+void binary_concatenation():
+{}
+{
+    // TODO(kaikalur): fixit -- binary_value_expression()  "||"  binary_primary()
+    "||"  binary_primary()
+}
+
+void string_value_function():
+{}
+{
+    character_value_function()
+  | binary_value_function()
+}
+
+void character_value_function() #BuiltinFunctionCall:
+{}
+{
+  (
+    character_substring_function()
+  | regular_expression_substring_function()
+  | regex_substring_function()
+  | fold()
+  | transcoding()
+  | character_transliteration()
+  | regex_transliteration()
+  | trim_function()
+  | character_overlay_function()
+  | normalize_function()
+  | specific_type_method()
+  ) #ArgumentList(>0)
+}
+
+void character_substring_function():
+{}
+{
+    "SUBSTRING" "(" character_value_expression() "FROM" numeric_value_expression()
+    [ "FOR" numeric_value_expression() ] 
+    [ ( "USING" char_length_units() )#Unsupported ] 
+    ")" 
+}
+
+void regular_expression_substring_function() #Unsupported:
+{}
+{
+    "SUBSTRING" "(" character_value_expression() "SIMILAR" character_value_expression()
+    "ESCAPE" character_value_expression() ")"
+}
+
+void regex_substring_function() #Unsupported:
+{}
+{
+    "SUBSTRING_REGEX" "("
+    character_value_expression() [ "FLAG" character_value_expression() ]
+    "IN" character_value_expression()
+    [ "FROM" numeric_value_expression() ]
+    [ "USING" char_length_units() ]
+    [ "OCCURRENCE" numeric_value_expression() ]
+    [ "GROUP" numeric_value_expression() ]
+     ")"
+}
+
+void fold():
+{}
+{
+    ( "UPPER" | "LOWER" ) "(" character_value_expression() ")"
+}
+
+void transcoding() #Unsupported:
+{}
+{
+    "CONVERT" "(" character_value_expression() "USING" schema_qualified_name() ")"
+}
+
+void character_transliteration() #Unsupported:
+{}
+{
+    "TRANSLATE" "(" character_value_expression() "USING" schema_qualified_name() ")"
+}
+
+void regex_transliteration() #Unsupported:
+{}
+{
+    "TRANSLATE_REGEX" "("
+    character_value_expression() [ "FLAG" character_value_expression() ]
+    "IN" character_value_expression()
+    [ "WITH" character_value_expression() ]
+    [ "FROM" numeric_value_expression() ]
+    [ "USING" char_length_units() ]
+    [ "OCCURRENCE" regex_transliteration_occurrence() ]
+     ")"
+}
+
+void regex_transliteration_occurrence():
+{}
+{
+    "ALL"
+  | numeric_value_expression()
+}
+
+void trim_function():
+{}
+{
+    "TRIM" "(" trim_operands() ")"
+}
+
+void trim_operands():
+{}
+{
+    [ trim_specification() ]
+    character_value_expression()
+    [
+      ("," | ( "FROM" )#Unsupported )  // Non-standard
+      character_value_expression()
+    ]
+}
+
+void trim_specification() #Unsupported:
+{}
+{
+    "LEADING"
+  | "TRAILING"
+  | "BOTH"
+}
+
+void character_overlay_function() #Unsupported:
+{}
+{
+    "OVERLAY" "(" character_value_expression() "PLACING" character_value_expression()
+    "FROM" numeric_value_expression() [ "FOR" numeric_value_expression() ]
+    [ "USING" char_length_units() ] ")"
+}
+
+void normalize_function() #Unsupported:
+{}
+{
+    "NORMALIZE" "(" character_value_expression()
+    [ "," normal_form() [ "," normalize_function_result_length() ] ] ")"
+}
+
+void normal_form():
+{}
+{
+    "NFC"
+  | "NFD"
+  | "NFKC"
+  | "NFKD"
+}
+
+void normalize_function_result_length():
+{}
+{
+    character_length()
+  | character_large_object_length()
+}
+
+void specific_type_method() #Unsupported:
+{}
+{
+    //user_defined_type_value_expression() "." "SPECIFICTYPE"
+    "." "SPECIFICTYPE" [ "(" ")" ]
+}
+
+void binary_value_function():
+{}
+{
+    binary_substring_function()
+  | binary_trim_function()
+  | binary_overlay_function()
+}
+
+void binary_substring_function() #Unsupported:
+{}
+{
+    "SUBSTRING" "(" binary_value_expression() "FROM" numeric_value_expression()
+    [ "FOR" numeric_value_expression() ] ")"
+}
+
+void binary_trim_function():
+{}
+{
+    "TRIM" "(" binary_trim_operands() ")"
+}
+
+void binary_trim_operands():
+{}
+{
+    [ trim_specification() ]
+    binary_value_expression()
+    [
+      ("," | ( "FROM" )#Unsupported )  // Non-standard
+      binary_value_expression()
+    ]
+}
+
+void binary_overlay_function() #Unsupported:
+{}
+{
+    "OVERLAY" "(" binary_value_expression() "PLACING" binary_value_expression()
+    "FROM" numeric_value_expression() [ "FOR" numeric_value_expression() ] ")"
+}
+
+void datetime_value_expression():
+{}
+{
+    ( datetime_term() ) // [ ( "+" | "-" ) interval_term() ] )#AdditiveExpression(>1)
+  | ( interval_value_expression() ) //[ "+" datetime_term() ] )#AdditiveExpression(>1)
+}
+
+void datetime_term():
+{}
+{
+    datetime_factor()
+}
+
+void datetime_factor() :
+{}
+{
+    datetime_primary() [ time_zone() ]
+}
+
+void datetime_primary():
+{}
+{
+    datetime_value_function()
+  | interval_value_expression()
+}
+
+void time_zone() #Unsupported:
+{}
+{
+    "AT" time_zone_specifier()
+}
+
+void time_zone_specifier():
+{}
+{
+    "LOCAL"
+  | "TIME" "ZONE" interval_primary()
+}
+
+void datetime_value_function() #BuiltinFunctionCall:
+{}
+{
+  (
+    current_date_value_function()
+  | current_time_value_function()
+  | current_timestamp_value_function()
+  | current_local_time_value_function()
+  | current_local_timestamp_value_function()
+  ) #ArgumentList(>0)
+}
+
+void current_date_value_function():
+{}
+{
+    "CURRENT_DATE"
+}
+
+void current_time_value_function():
+{}
+{
+    "CURRENT_TIME" [ ( "(" <unsigned_integer> ")" )#Unsupported ]
+}
+
+void current_local_time_value_function():
+{}
+{
+    "LOCALTIME" [ ( "(" <unsigned_integer> ")" )#Unsupported ]
+}
+
+void current_timestamp_value_function():
+{}
+{
+    "CURRENT_TIMESTAMP" [ ( "(" <unsigned_integer> ")" )#Unsupported ]
+}
+
+void current_local_timestamp_value_function() #Unsupported:
+{}
+{
+    "LOCALTIMESTAMP" [ ( "(" <unsigned_integer> ")" )#Unsupported ]
+}
+
+void interval_value_expression():
+{}
+{
+    ( interval_term() ) //[ ( "+" | "-" ) interval_term() ] ) #AdditiveExpression(>1)
+  | LOOKAHEAD("(" datetime_value_expression() "-" datetime_term() ")" )
+    ( "(" datetime_value_expression() "-" datetime_term() ")" )#AdditiveExpression
+    interval_qualifier()
+}
+
+void interval_term() #MultiplicativeExpression(>1):
+{}
+{
+    interval_factor() [ ( "*" | "/" ) factor() ]
+  //TODO(kaikalur) - fixit | term() [ "*" interval_factor() ]
+}
+
+void interval_factor():
+{}
+{
+    ( ( "+" | "-" ) interval_primary() )#UnaryExpression(1)
+  | interval_primary()
+}
+
+void interval_primary():
+{}
+{
+    interval_value_function()
+|(
+ array_value_expression()
+) [ ( interval_qualifier() )#Unsupported ]
+}
+
+
+void interval_value_function() #BuiltinFunctionCall:
+{}
+{
+    ( interval_absolute_value_function() ) #ArgumentList(>0)
+}
+
+void interval_absolute_value_function():
+{}
+{
+    "ABS" "(" interval_value_expression() ")"
+}
+
+void boolean_value_expression() #OrExpression(>1):
+{}
+{
+    boolean_term() ( "OR" boolean_term() )*
+}
+
+void boolean_term() #AndExpression(>1):
+{}
+{
+    boolean_factor() ( "AND" boolean_factor() )*
+}
+
+void boolean_factor():
+{}
+{
+    ( "NOT" boolean_test() )#NotExpression
+  |  boolean_test()
+}
+
+void boolean_test() #IsExpression(>1):
+{}
+{
+    boolean_primary()
+    [ "IS" [ "NOT" ] truth_value() ]
+}
+
+void truth_value():
+{}
+{
+    "TRUE"
+  | "FALSE"
+  | ( "UNKNOWN" )#Unsupported
+}
+
+void boolean_primary():
+{}
+{
+    predicate()
+  | boolean_predicand()
+}
+
+void boolean_predicand():
+{}
+{
+    parenthesized_boolean_value_expression()
+  | numeric_value_expression()
+}
+
+void parenthesized_boolean_value_expression() #ParenthesizedExpression:
+{}
+{
+     "(" boolean_value_expression() ")"
+}
+
+void array_value_expression() #Concatenation(>1):
+{}
+{
+    array_primary() (  "||"  array_primary() )*
+}
+
+void array_value_expression_1():
+{}
+{
+    array_value_expression()
+}
+
+void array_primary():
+{}
+{
+    array_value_function()
+  | multiset_value_expression()
+}
+
+void array_value_function() #Unsupported:
+{}
+{
+    trim_array_function()
+}
+
+void trim_array_function():
+{}
+{
+    "TRIM_ARRAY" "(" array_value_expression() "," numeric_value_expression() ")"
+}
+
+void array_value_constructor():
+{}
+{
+    array_value_constructor_by_enumeration()
+  | array_value_constructor_by_query()
+}
+
+void array_value_constructor_by_enumeration() #ArrayLiteral:
+{}
+{
+    "ARRAY" left_bracket_or_trigraph()
+    [ array_element_list() ]  // For parsing ease.
+    right_bracket_or_trigraph()
+}
+
+void array_element_list():
+{}
+{
+    array_element() ( "," array_element() )*
+}
+
+void array_element():
+{}
+{
+    value_expression()
+}
+
+void array_value_constructor_by_query() #Unsupported:
+{}
+{
+    "ARRAY" subquery()
+}
+
+void multiset_value_expression() :
+{}
+{
+    multiset_term() [ ( "MULTISET" "UNION" [ "ALL" | "DISTINCT" ] | "MULTISET" "EXCEPT" [ "ALL" | "DISTINCT" ] ) multiset_term() #Unsupported(2) ]
+}
+
+void multiset_term() :
+{}
+{
+    multiset_primary() [ "MULTISET" "INTERSECT" [ "ALL" | "DISTINCT" ] multiset_primary() #Unsupported(2)]
+}
+
+void multiset_primary():
+{}
+{
+    multiset_set_function()
+  | value_expression_primary()
+}
+
+void multiset_set_function() #Unsupported:
+{}
+{
+    "SET" "(" multiset_value_expression() ")"
+}
+
+void multiset_value_constructor() #Unsupported:
+{}
+{
+    multiset_value_constructor_by_enumeration()
+  | multiset_value_constructor_by_query()
+  | table_value_constructor_by_query()
+}
+
+void multiset_value_constructor_by_enumeration():
+{}
+{
+    "MULTISET" left_bracket_or_trigraph() multiset_element_list() right_bracket_or_trigraph()
+}
+
+void multiset_element_list():
+{}
+{
+    multiset_element() ( "," multiset_element() )*
+}
+
+void multiset_element():
+{}
+{
+    value_expression()
+}
+
+void multiset_value_constructor_by_query():
+{}
+{
+    "MULTISET" subquery()
+}
+
+void table_value_constructor_by_query():
+{}
+{
+    "TABLE" subquery()
+}
+
+void row_value_constructor():
+{}
+{
+    explicit_row_value_constructor()
+  | common_value_expression()
+  | boolean_value_expression()
+}
+
+void explicit_row_value_constructor():
+{}
+{
+    ( "ROW" "(" row_value_constructor_element_list() ")" )#RowExpression
+  | subquery()
+  | ( "(" row_value_constructor_element() [ "," row_value_constructor_element_list() ] ")" )#RowExpression
+}
+
+void row_value_constructor_element_list():
+{}
+{
+    row_value_constructor_element() ( "," row_value_constructor_element() )*
+}
+
+void row_value_constructor_element():
+{}
+{
+    value_expression()
+}
+
+void contextually_typed_row_value_constructor():
+{}
+{
+    common_value_expression()
+  | boolean_value_expression()
+  | contextually_typed_value_specification()
+  | ( "(" contextually_typed_value_specification() ")" )#ParenthesizedExpression
+  | ("(" contextually_typed_row_value_constructor_element() ","
+         contextually_typed_row_value_constructor_element_list() ")" )#ParenthesizedExpression
+  | ( "ROW" "(" contextually_typed_row_value_constructor_element_list() ")" )#RowExression
+}
+
+void contextually_typed_row_value_constructor_element_list():
+{}
+{
+    contextually_typed_row_value_constructor_element()
+     ( "," contextually_typed_row_value_constructor_element() )*
+}
+
+void contextually_typed_row_value_constructor_element():
+{}
+{
+    contextually_typed_value_specification()
+  //| value_expression()
+}
+
+void row_value_constructor_predicand():
+{}
+{
+    common_value_expression()
+  | explicit_row_value_constructor()
+  //| boolean_predicand()
+}
+
+void row_value_expression():
+{}
+{
+    explicit_row_value_constructor()
+  | row_value_special_case()
+}
+
+void table_row_value_expression():
+{}
+{
+    row_value_constructor()
+  | row_value_special_case()
+}
+
+void contextually_typed_row_value_expression():
+{}
+{
+    contextually_typed_row_value_constructor()
+  | row_value_special_case()
+}
+
+void row_value_predicand():
+{}
+{
+    row_value_constructor_predicand()
+  | row_value_special_case()
+}
+
+void row_value_special_case():
+{}
+{
+    common_value_expression()
+  | nonparenthesized_value_expression_primary()
+}
+
+void table_value_constructor() #Values:
+{}
+{
+    "VALUES" row_value_expression_list()
+}
+
+void row_value_expression_list():
+{}
+{
+    table_row_value_expression() ( "," table_row_value_expression() )*
+}
+
+void contextually_typed_table_value_constructor() #Values:
+{}
+{
+    "VALUES" contextually_typed_row_value_expression_list()
+}
+
+void contextually_typed_row_value_expression_list():
+{}
+{
+    contextually_typed_row_value_expression()
+     ( "," contextually_typed_row_value_expression() )*
+}
+
+void table_expression() #TableExpression:
+{}
+{
+    from_clause()
+    [ where_clause() ]
+    [ group_by_clause() ]
+    [ having_clause() ]
+    [ window_clause() ]
+}
+
+void from_clause() #FromClause:
+{}
+{
+    "FROM" table_reference_list()
+}
+
+void table_reference_list() #CommaJoin(>1):
+{}
+{
+    table_reference() ( "," table_reference() )*
+}
+
+void table_reference() #Join(>1):
+{}
+{
+    table_factor() ( joined_table() )*
+}
+
+void table_factor() #TableSample(>1):
+{}
+{
+    table_primary() [ sample_clause() ]
+
+    [ ( partitioned_join_table() ) #Unsupported ] // For removing left recursion
+}
+
+void sample_clause():
+{}
+{
+    "TABLESAMPLE" sample_method() "(" sample_percentage() ")"
+    [ repeatable_clause() ]
+}
+
+void sample_method():
+{}
+{
+    "BERNOULLI"
+  | "SYSTEM"
+}
+
+void repeatable_clause() #Unsupported:
+{}
+{
+    "REPEATABLE" "(" repeat_argument() ")"
+}
+
+void sample_percentage():
+{}
+{
+    numeric_value_expression()
+}
+
+void repeat_argument():
+{}
+{
+    numeric_value_expression()
+}
+
+void table_primary() #AliasedTable(>1):
+{}
+{
+  (
+    table_or_query_name()
+  | LOOKAHEAD("(" ("WITH"|"SELECT"|"VALUES"|"TABLE")) derived_table()
+  | parenthesized_joined_table()
+  | lateral_derived_table()
+  | collection_derived_table()
+  | table_function_derived_table()
+  | only_spec()
+  | data_change_delta_table()
+  )
+
+  [ alias() ]
+}
+
+void alias() #Alias:
+{}
+{
+    [ "AS" ]
+    identifier()
+    [ identifier_suffix_chain() ]
+    [ "(" column_name_list() ")" ]
+}
+
+void system_version_specification() #Unsupported:
+{}
+{
+    "AS" "OF" "SYSTEM" "TIME" datetime_value_expression()
+  | "VERSIONS" "BEFORE" "SYSTEM" "TIME" datetime_value_expression()
+  | "VERSIONS" "AFTER" "SYSTEM" "TIME" datetime_value_expression()
+  | "VERSIONS" "BETWEEN" [ "ASYMMETRIC" | "SYMMETRIC" ]
+    "SYSTEM" "TIME" datetime_value_expression() "AND" datetime_value_expression()
+}
+
+void only_spec() #Unsupported:
+{}
+{
+    "ONLY" "(" table_or_query_name() ")"
+}
+
+// TODO(kaikalur) - check Presto and Spark for lateral
+void lateral_derived_table() #Unsupported:
+{}
+{
+    "LATERAL" subquery()
+}
+
+void collection_derived_table() #Unnest:
+{}
+{
+    "UNNEST" "(" collection_value_expression()
+     ( "," collection_value_expression() )* ")"
+    [ "WITH" "ORDINALITY" ]
+}
+
+void table_function_derived_table() #Unsupported:
+{}
+{
+    "TABLE" "(" collection_value_expression() ")"
+}
+
+void derived_table():
+{}
+{
+    LOOKAHEAD("(" ("SELECT"|"VALUES"|"TABLE")) query_expression()
+  | subquery()
+}
+
+void table_or_query_name():
+{}
+{
+    table_name()
+  | identifier()
+}
+
+void column_name_list() #ColumnNames:
+{}
+{
+    identifier() ( "," identifier() )*
+}
+
+void data_change_delta_table() #Unsupported:
+{}
+{
+    result_option() "TABLE" "(" data_change_statement() ")"
+}
+
+void data_change_statement():
+{}
+{
+    delete_statement_searched()
+  | insert_statement()
+  | merge_statement()
+  | update_statement_searched()
+}
+
+void result_option():
+{}
+{
+    "FINAL"
+  | "NEW"
+  | "OLD"
+}
+
+void parenthesized_joined_table() #Join(>1):
+{}
+{
+    // TODO(kaikalur) -- double check the following
+       //"(" parenthesized_joined_table() ")"
+    //| "(" joined_table() ")"
+
+    "("
+       (
+         LOOKAHEAD("(" ("WITH"|"SELECT"|"VALUES"|"TABLE")) table_primary()
+       | table_reference()
+       )
+
+       ( joined_table() )*
+    ")"
+}
+
+void joined_table():
+{}
+{
+    cross_join()
+  | qualified_join()
+  | natural_join()
+}
+
+void cross_join():
+{}
+{
+    //TODO(kaikalur): fixit --table_reference() "CROSS" "JOIN" table_factor()
+     "CROSS" "JOIN" table_factor()
+}
+
+void qualified_join():
+{}
+{
+    //TODO(kaikalur) -- check partitioned ( table_reference() | partitioned_join_table() )
+    [ join_type() ] "JOIN"
+    ( table_reference() | partitioned_join_table() )
+    join_specification()
+}
+
+void partitioned_join_table() #Unsupported:
+{}
+{
+    "PARTITION" "BY" partitioned_join_column_reference_list()
+}
+
+void partitioned_join_column_reference_list():
+{}
+{
+     "(" partitioned_join_column_reference()
+     ( "," partitioned_join_column_reference() )*
+     ")"
+}
+
+void partitioned_join_column_reference():
+{}
+{
+    column_reference()
+}
+
+void natural_join() #Unsupported:
+{}
+{
+    //TODO(kaikalur) -- check ( table_reference() | partitioned_join_table() )
+    "NATURAL" [ join_type() ] "JOIN"
+    ( table_factor() | partitioned_join_table() )
+}
+
+void join_specification():
+{}
+{
+    join_condition()
+  | named_columns_join()
+}
+
+void join_condition() #OnClause:
+{}
+{
+    "ON" search_condition()
+}
+
+void named_columns_join() #UsingClause:
+{}
+{
+    "USING" "(" join_column_list() ")"
+}
+
+void join_type():
+{}
+{
+    "INNER"
+  | outer_join_type() [ "OUTER" ]
+}
+
+void outer_join_type():
+{}
+{
+    "LEFT"
+  | "RIGHT"
+  | "FULL"
+}
+
+void join_column_list():
+{}
+{
+    column_name_list()
+}
+
+void where_clause() #WhereClause:
+{}
+{
+    "WHERE" search_condition()
+}
+
+void group_by_clause() #GroupbyClause:
+{}
+{
+    "GROUP" "BY"
+    [ ( set_quantifier() )#Unsupported ]
+    grouping_element_list()
+}
+
+void grouping_element_list():
+{}
+{
+    grouping_element() ( "," grouping_element() )*
+}
+
+void grouping_element():
+{}
+{
+    rollup_list()
+  | cube_list()
+  | grouping_sets_specification()
+  | empty_grouping_set()
+  | ordinary_grouping_set()
+}
+
+void ordinary_grouping_set():
+{}
+{
+    grouping_column_reference()
+  | "(" grouping_column_reference_list() ")"
+}
+
+void grouping_column_reference():
+{}
+{
+  (
+    grouping_expression()
+  | column_reference()
+  )
+
+  [ ( collate_clause() )#Unsupported ]
+}
+
+void grouping_column_reference_list():
+{}
+{
+    grouping_column_reference() ( "," grouping_column_reference() )*
+}
+
+void rollup_list() #Rollup:
+{}
+{
+    "ROLLUP" "(" ordinary_grouping_set_list() ")"
+}
+
+void ordinary_grouping_set_list():
+{}
+{
+    ordinary_grouping_set() ( "," ordinary_grouping_set() )*
+}
+
+void cube_list() #Cube:
+{}
+{
+    "CUBE" "(" ordinary_grouping_set_list() ")"
+}
+
+void grouping_sets_specification() #GroupingSets:
+{}
+{
+    "GROUPING" "SETS" "(" grouping_set_list() ")"
+}
+
+void grouping_set_list():
+{}
+{
+    grouping_set() ( "," grouping_set() )*
+}
+
+void grouping_set():
+{}
+{
+    rollup_list()
+  | cube_list()
+  | grouping_sets_specification()
+  | empty_grouping_set()
+  | ordinary_grouping_set()
+}
+
+void empty_grouping_set():
+{}
+{
+     "(" ")"
+}
+
+void having_clause() #HavingClause:
+{}
+{
+    "HAVING" search_condition()
+}
+
+void window_clause() #Unsupported:
+{}
+{
+    "WINDOW" window_definition_list()
+}
+
+void window_definition_list():
+{}
+{
+    window_definition() ( "," window_definition() )*
+}
+
+void window_definition():
+{}
+{
+    identifier() "AS" window_specification()
+}
+
+void window_specification() #WindowSpecification:
+{}
+{
+     "(" [ window_specification_details() ] ")"
+}
+
+void window_specification_details():
+{}
+{
+    // TODO(kaikalur): checkout this rule
+  (
+    window_partition_clause()
+  | window_order_clause()
+  | window_frame_clause()
+  | existing_identifier()
+  )+
+}
+
+void existing_identifier():
+{}
+{
+    identifier()
+}
+
+void window_partition_clause() #PartitionByClause:
+{}
+{
+    "PARTITION" "BY" window_partition_column_reference_list()
+}
+
+void window_partition_column_reference_list():
+{}
+{
+    window_partition_column_reference()
+     ( "," window_partition_column_reference() )*
+}
+
+void window_partition_column_reference():
+{}
+{
+  (
+    value_expression()  // Non-standard
+  | column_reference()
+  )
+  [ collate_clause() ]
+}
+
+void window_order_clause() #OrderByClause:
+{}
+{
+    "ORDER" "BY" sort_specification_list()
+}
+
+void window_frame_clause():
+{}
+{
+    window_frame_units() window_frame_extent()
+    [ window_frame_exclusion() ]
+}
+
+void window_frame_units() #WindowFrameUnits:
+{}
+{
+    "ROWS"
+  | "RANGE"
+}
+
+void window_frame_extent() #WindowFrameExtent:
+{}
+{
+    window_frame_start()
+  | window_frame_between()
+}
+
+void window_frame_start():
+{}
+{
+    ( "UNBOUNDED" "PRECEDING" )#UnboundedPreceding
+  | ( "CURRENT" "ROW" )#CurrentRow
+  | window_frame_preceding()
+}
+
+void window_frame_preceding() #WindowFramePreceding:
+{}
+{
+    //TODO(kaikalur) - genralized unsigned_value_specification() "PRECEDING"
+    value_expression() "PRECEDING"
+}
+
+void window_frame_between() #WindowFrameBetween:
+{}
+{
+    "BETWEEN" window_frame_bound() "AND" window_frame_bound()
+}
+
+void window_frame_bound():
+{}
+{
+    window_frame_start()
+  | ( "UNBOUNDED" "FOLLOWING" )#UnboundedFollowing
+  | window_frame_following()
+}
+
+void window_frame_following() #WindowFrameFollowing:
+{}
+{
+    //TODO(kaikalur) - genralized unsigned_value_specification() "FOLLOWING"
+    value_expression() "FOLLOWING"
+}
+
+void window_frame_exclusion() #Unsupported:
+{}
+{
+    "EXCLUDE" "CURRENT" "ROW"
+  | "EXCLUDE" "GROUP"
+  | "EXCLUDE" "TIES"
+  | "EXCLUDE" "NO" "OTHERS"
+}
+
+void query_specification() #Select:
+{}
+{
+    "SELECT" [ set_quantifier() ] select_list()
+    [ table_expression() ]  // Non-standard
+}
+
+void select_list() #SelectList:
+{}
+{
+    star()
+    ( "," select_sublist() )*   // Non-standard
+  | select_sublist() ( "," select_sublist() )*
+    [ "," star() ]   // Non-standard
+    ( "," select_sublist() )*  // Non-standard
+}
+
+void star() #SelectItem:
+{}
+{
+    ( "*" ) #Star
+}
+
+void select_sublist() #SelectItem:
+{}
+{
+    //derived_column()
+  //| qualified_asterisk()
+
+    // For ease of parsing
+    derived_column()
+    [
+      "." ( "*" )#Star()
+      [ ( "AS" "(" all_fields_column_name_list() ")" )#Unsupported ]
+    | as_clause()
+    ]
+}
+
+void qualified_asterisk():
+{}
+{
+    ( asterisked_identifier_chain() "." "*" )#Star
+  | all_fields_reference()
+}
+
+void asterisked_identifier_chain() #QualifiedName(>1):
+{}
+{
+    identifier() ( "." identifier() )*
+}
+
+void derived_column():
+{}
+{
+    value_expression() [ as_clause() ]
+}
+
+void as_clause() #Alias:
+{}
+{
+    [ "AS" ] identifier()
+}
+
+void all_fields_reference():
+{}
+{
+    value_expression_primary() "." "*"
+    [ ( "AS" "(" all_fields_column_name_list() ")" )#Unsupported ]
+}
+
+void all_fields_column_name_list():
+{}
+{
+    column_name_list()
+}
+
+void query_expression() #QuerySpecification(>1):
+{}
+{
+    [ with_clause() ] query_expression_body()
+    [ order_by_clause() ]
+    // TODO(kaikalur): validate
+    [ limit_clause() | result_offset_clause() [ fetch_first_clause() ] |  fetch_first_clause() ]
+}
+
+void with_clause() #WithClause:
+{}
+{
+    "WITH" [ "RECURSIVE" ] with_list()
+}
+
+void with_list():
+{}
+{
+    with_list_element() ( "," with_list_element() )*
+}
+
+void with_list_element() #Cte:
+{}
+{
+    identifier() [ "(" column_name_list() ")" ]
+    "AS" subquery() [ search_or_cycle_clause() ]
+}
+
+void query_expression_body() #SetOperation(>1):
+{}
+{
+    query_term()
+    (  "UNION" [ "ALL" | "DISTINCT" ]
+      [ corresponding_spec() ] query_term()
+    |  "EXCEPT" [ "ALL" | "DISTINCT" ]
+      [ corresponding_spec() ] query_term()
+    )*
+}
+
+void query_term() #SetOperation(>1):
+{}
+{
+    query_primary() ( "INTERSECT" [ "ALL" | "DISTINCT" ] [ corresponding_spec() ] query_primary() )*
+}
+
+void query_primary():
+{}
+{
+    ( "(" query_expression_body()
+      [ order_by_clause() ]
+      ( [ limit_clause() ] | [ result_offset_clause() ] [ fetch_first_clause() ] )
+      ")"
+    )#Subquery
+  | simple_table()
+}
+
+void simple_table():
+{}
+{
+    table_value_constructor()
+  | explicit_table()
+  | query_specification()
+}
+
+void explicit_table():
+{}
+{
+    "TABLE" table_or_query_name()
+}
+
+void corresponding_spec() #Unsupported:
+{}
+{
+    "CORRESPONDING" [ "BY" "(" column_name_list() ")" ]
+}
+
+void order_by_clause() #OrderByClause:
+{}
+{
+    "ORDER" "BY" sort_specification_list()
+}
+
+void result_offset_clause() #Unsupported:
+{}
+{
+    "OFFSET" simple_value_specification() ( "ROW" | "ROWS" )
+}
+
+void fetch_first_clause() #Unsupported:
+{}
+{
+    "FETCH" ( "FIRST" | "NEXT" ) [ simple_value_specification() ] ( "ROW" | "ROWS" ) "ONLY"
+}
+
+void search_or_cycle_clause() #Unsupported:
+{}
+{
+    search_clause()
+  | cycle_clause()
+  | search_clause() cycle_clause()
+}
+
+void search_clause():
+{}
+{
+    "SEARCH" recursive_search_order() "SET" identifier()
+}
+
+void recursive_search_order():
+{}
+{
+    "DEPTH" "FIRST" "BY" column_name_list()
+  | "BREADTH" "FIRST" "BY" column_name_list()
+}
+
+void cycle_clause():
+{}
+{
+    "CYCLE" cycle_column_list() "SET" identifier() "TO" value_expression()
+    "DEFAULT" value_expression() "USING" identifier()
+}
+
+void cycle_column_list():
+{}
+{
+    identifier() ( "," identifier() )*
+}
+
+void subquery() #Subquery:
+{}
+{
+    "(" query_expression() ")"
+}
+
+void predicate():
+{}
+{
+    exists_predicate()
+  | unique_predicate()
+  | row_value_predicand()
+
+    [
+      { PushNode(PopNode()); }
+      (
+        comparison_predicate()
+      | between_predicate()
+      | in_predicate()
+      | like_predicate()
+      | similar_predicate()
+      | regex_like_predicate()
+      | null_predicate()
+      | quantified_comparison_predicate()
+      | normalized_predicate()
+      | match_predicate()
+      | overlaps_predicate()
+      | distinct_predicate()
+      | member_predicate()
+      | submultiset_predicate()
+      | set_predicate()
+      | type_predicate()
+      )
+    ]
+}
+
+void comparison_predicate():
+{}
+{
+    comparison_predicate_part_2()
+}
+
+void comparison_predicate_part_2() #Comparison(2):
+{}
+{
+    comp_op() row_value_predicand()
+}
+
+void comp_op():
+{}
+{
+    <EQUAL: "=">
+  | <NOT_EQUAL: "<>">
+  | <LESS_THAN: "<">
+  | <GREATER_THAN: ">">
+  | <LESS_THAN_OR_EQUAL: "<=">
+  | <GREATER_THAN_OR_EQUAL: ">=">
+  | <NOT_EQUAL_2: "!="> // Non-standard
+}
+
+void between_predicate():
+{}
+{
+    between_predicate_part_2()
+}
+
+void between_predicate_part_2() #Between(3):
+{}
+{
+    [ "NOT" ] "BETWEEN" [ "ASYMMETRIC" | "SYMMETRIC" ]
+    row_value_predicand() "AND" row_value_predicand()
+}
+
+void in_predicate():
+{}
+{
+    in_predicate_part_2()
+}
+
+void in_predicate_part_2() #InPredicate:
+{}
+{
+    [ "NOT" ] "IN" in_predicate_value()
+}
+
+void in_predicate_value():
+{}
+{
+    ( "(" in_value_list() ")" )#InvalueList
+  | subquery()
+}
+
+void in_value_list():
+{}
+{
+    row_value_expression() ( "," row_value_expression() )*
+}
+
+void like_predicate():
+{}
+{
+    character_like_predicate()
+  | octet_like_predicate()
+}
+
+void character_like_predicate():
+{}
+{
+    character_like_predicate_part_2()
+}
+
+void character_like_predicate_part_2() #Like(2):
+{}
+{
+    [ "NOT" ] "LIKE" character_value_expression() [ "ESCAPE" character_value_expression() ]
+}
+
+void octet_like_predicate():
+{}
+{
+    octet_like_predicate_part_2()
+}
+
+void octet_like_predicate_part_2() #Like(2):
+{}
+{
+    [ "NOT" ] "LIKE" binary_value_expression() [ "ESCAPE" binary_value_expression() ]
+}
+
+void similar_predicate():
+{}
+{
+    similar_predicate_part_2()
+}
+
+void similar_predicate_part_2() #Unsupported:
+{}
+{
+    [ "NOT" ] "SIMILAR" "TO" character_value_expression() [ "ESCAPE" character_value_expression() ]
+}
+
+void regex_like_predicate():
+{}
+{
+    regex_like_predicate_part_2()
+}
+
+void regex_like_predicate_part_2() #Unsupported:
+{}
+{
+    [ "NOT" ] "LIKE_REGEX" character_value_expression() [ "FLAG" character_value_expression() ]
+}
+
+void null_predicate():
+{}
+{
+    null_predicate_part_2()
+}
+
+void null_predicate_part_2() #IsNull(1):
+{}
+{
+    "IS" [ "NOT" ] "NULL"
+}
+
+void quantified_comparison_predicate():
+{}
+{
+    quantified_comparison_predicate_part_2()
+}
+
+void quantified_comparison_predicate_part_2() #QuantifiedComparison(2):
+{}
+{
+    comp_op() ( "ALL" | "SOME" | "ANY" ) subquery()
+}
+
+void exists_predicate() #Exists(1):
+{}
+{
+    "EXISTS" subquery()
+}
+
+void unique_predicate() #Unsupported:
+{}
+{
+    "UNIQUE" subquery()
+}
+
+void normalized_predicate():
+{}
+{
+    normalized_predicate_part_2()
+}
+
+void normalized_predicate_part_2() #Unsupported:
+{}
+{
+    "IS" [ "NOT" ] [ normal_form() ] "NORMALIZED"
+}
+
+void match_predicate():
+{}
+{
+    match_predicate_part_2()
+}
+
+void match_predicate_part_2() #Unsupported:
+{}
+{
+    "MATCH" [ "UNIQUE" ] [ "SIMPLE" | "PARTIAL" | "FULL" ] subquery()
+}
+
+void overlaps_predicate():
+{}
+{
+    overlaps_predicate_part_2()
+}
+
+void overlaps_predicate_part_1():
+{}
+{
+    row_value_predicand_1()
+}
+
+void overlaps_predicate_part_2() #Unsupported:
+{}
+{
+    "OVERLAPS" row_value_predicand_2()
+}
+
+void row_value_predicand_1():
+{}
+{
+    row_value_predicand()
+}
+
+void row_value_predicand_2():
+{}
+{
+    row_value_predicand()
+}
+
+void distinct_predicate():
+{}
+{
+    distinct_predicate_part_2()
+}
+
+void distinct_predicate_part_2() #IsDistinct(2):
+{}
+{
+    "IS" [ "NOT" ] "DISTINCT" "FROM" row_value_predicand_4()
+}
+
+void row_value_predicand_3():
+{}
+{
+    row_value_predicand()
+}
+
+void row_value_predicand_4():
+{}
+{
+    row_value_predicand()
+}
+
+void member_predicate():
+{}
+{
+    member_predicate_part_2()
+}
+
+void member_predicate_part_2() #Unsupported:
+{}
+{
+    [ "NOT" ] "MEMBER" [ "OF" ] multiset_value_expression()
+}
+
+void submultiset_predicate():
+{}
+{
+    submultiset_predicate_part_2()
+}
+
+void submultiset_predicate_part_2() #Unsupported:
+{}
+{
+    [ "NOT" ] "SUBMULTISET" [ "OF" ] multiset_value_expression()
+}
+
+void set_predicate():
+{}
+{
+    set_predicate_part_2()
+}
+
+void set_predicate_part_2() #Unsupported:
+{}
+{
+    "IS" [ "NOT" ] "A" "SET"
+}
+
+void type_predicate():
+{}
+{
+    type_predicate_part_2()
+}
+
+void type_predicate_part_2() #Unsupported:
+{}
+{
+    "IS" [ "NOT" ] "OF" "(" type_list() ")"
+}
+
+void type_list():
+{}
+{
+    user_defined_type_specification()
+     ( "," user_defined_type_specification() )*
+}
+
+void user_defined_type_specification():
+{}
+{
+    exclusive_user_defined_type_specification()
+  | inclusive_user_defined_type_specification()
+}
+
+void inclusive_user_defined_type_specification():
+{}
+{
+    path_resolved_user_defined_type_name()
+}
+
+void exclusive_user_defined_type_specification():
+{}
+{
+    "ONLY" path_resolved_user_defined_type_name()
+}
+
+void search_condition():
+{}
+{
+    boolean_value_expression()
+}
+
+void interval_qualifier() #InvervalQualifier:
+{}
+{
+    start_field() "TO" end_field()
+  | single_datetime_field()
+}
+
+void start_field() #NonSecondField:
+{}
+{
+    non_second_primary_datetime_field()
+    [ "(" interval_leading_field_precision() ")" ]
+}
+
+void end_field():
+{}
+{
+    non_second_primary_datetime_field()
+  | ( "SECOND" [ "(" interval_fractional_seconds_precision() ")" ] )#SecondField
+}
+
+//TODO(kaikalur): Need to check the matching rules.
+void single_datetime_field():
+{}
+{
+    //non_second_primary_datetime_field()
+    //[ "(" interval_leading_field_precision() ")" ]
+    start_field()
+  | ( "SECOND" [ "(" interval_leading_field_precision()
+    [ "," interval_fractional_seconds_precision() ] ")" ] )#SecondField
+}
+
+void primary_datetime_field():
+{}
+{
+    non_second_primary_datetime_field()
+  | "SECOND"
+}
+
+void non_second_primary_datetime_field() #NonSecondDateTimeField:
+{}
+{
+    "YEAR"
+  | "MONTH"
+  | "DAY"
+  | "HOUR"
+  | "MINUTE"
+}
+
+void interval_fractional_seconds_precision():
+{}
+{
+    <unsigned_integer>
+}
+
+void interval_leading_field_precision():
+{}
+{
+    <unsigned_integer>
+}
+
+void language_clause() #LanguageClause:
+{}
+{
+    "LANGUAGE" language_name()
+}
+
+void language_name():
+{}
+{
+    "ADA"
+  | "C"
+  | "COBOL"
+  | "FORTRAN"
+  | "M" | "MUMPS"
+  | "PASCAL"
+  | "PLI"
+  | "SQL"
+}
+
+void path_specification():
+{}
+{
+    "PATH" schema_name_list()
+}
+
+void schema_name_list():
+{}
+{
+    schema_name() ( "," schema_name() )*
+}
+
+void routine_invocation():
+{}
+{
+    routine_name() SQL_argument_list()
+}
+
+void routine_name():
+{}
+{
+    [ schema_name() "." ] identifier()
+}
+
+void SQL_argument_list() #ArgumentList:
+{}
+{
+     "(" [ SQL_argument() ( "," SQL_argument() )* ] ")"
+}
+
+void SQL_argument():
+{}
+{
+    LOOKAHEAD(lambda_params() "->") lambda()
+  | value_expression() [ generalized_expression() ]
+  | named_argument_specification()
+  | contextually_typed_value_specification()
+  | target_specification()
+}
+
+void generalized_expression() #Unsupported:
+{}
+{
+    "AS" path_resolved_user_defined_type_name()
+}
+
+void named_argument_specification() #NamedArgument:
+{}
+{
+    identifier()  "=>"
+    named_argument_SQL_argument()
+}
+
+void named_argument_SQL_argument():
+{}
+{
+    value_expression()
+  | contextually_typed_value_specification()
+  | target_specification()
+}
+
+void character_set_specification() #Unsupported:
+{}
+{
+    standard_character_set_name()
+  | implementation_defined_character_set_name()
+  | user_defined_character_set_name()
+}
+
+void standard_character_set_name():
+{}
+{
+    character_set_name()
+}
+
+void implementation_defined_character_set_name():
+{}
+{
+    character_set_name()
+}
+
+void user_defined_character_set_name():
+{}
+{
+    character_set_name()
+}
+
+void specific_routine_designator() #Unsupported:
+{}
+{
+    "SPECIFIC" routine_type() schema_qualified_name()
+  | routine_type() member_name() [ "FOR" schema_resolved_user_defined_type_name() ]
+}
+
+void routine_type():
+{}
+{
+    "ROUTINE"
+  | "FUNCTION"
+  | "PROCEDURE"
+  | [ "INSTANCE" | "STATIC" | "CONSTRUCTOR" ] "METHOD"
+}
+
+void member_name():
+{}
+{
+    member_name_alternatives() [ data_type_list() ]
+}
+
+void member_name_alternatives():
+{}
+{
+    schema_qualified_name()
+  | identifier()
+}
+
+void data_type_list():
+{}
+{
+     "(" [ data_type() ( "," data_type() )* ] ")"
+}
+
+void collate_clause() #Unsupported:
+{}
+{
+    "COLLATE" schema_qualified_name()
+}
+
+void constraint_name_definition() #Unsupported:
+{}
+{
+    "CONSTRAINT" schema_qualified_name()
+}
+
+void constraint_characteristics():
+{}
+{
+    constraint_check_time() [ [ "NOT" ] "DEFERRABLE" ] [ constraint_enforcement() ]
+  | [ "NOT" ] "DEFERRABLE" [ constraint_check_time() ] [ constraint_enforcement() ]
+  | constraint_enforcement()
+}
+
+void constraint_check_time():
+{}
+{
+    "INITIALLY" "DEFERRED"
+  | "INITIALLY" "IMMEDIATE"
+}
+
+void constraint_enforcement():
+{}
+{
+    [ "NOT" ] "ENFORCED"
+}
+
+void aggregate_function() #AggregationFunction:
+{}
+{
+  (
+    "COUNT" "(" "*" ")"
+  | count()
+  | general_set_function()
+  | binary_set_function()
+  | ordered_set_function()
+  | array_aggregate_function()
+  | presto_aggregations()
+  )
+
+  [ filter_clause() ]
+}
+
+void general_set_function():
+{}
+{
+    set_function_type() "(" [ set_quantifier() ] value_expression()
+      [ extra_args_to_agg() ]
+    ")"
+}
+
+void set_function_type():
+{}
+{
+    computational_operation()
+}
+
+void computational_operation():
+{}
+{
+    "AVG"
+  | "MAX"
+  | "MIN"
+  | "SUM"
+  | "EVERY"
+  | "ANY"
+  | "SOME"
+  | "COUNT"
+  | "STDDEV_POP"
+  | "STDDEV_SAMP"
+  | "VAR_SAMP"
+  | "VAR_POP"
+  | "COLLECT"
+  | "FUSION"
+  | "INTERSECTION"
+}
+
+void set_quantifier() #SetQuantifier:
+{}
+{
+    "DISTINCT"
+  | "ALL"
+}
+
+void filter_clause() #FilterClause:
+{}
+{
+    "FILTER" "(" "WHERE" search_condition() ")"
+}
+
+void binary_set_function():
+{}
+{
+    binary_set_function_type() "(" dependent_variable_expression() ","
+    independent_variable_expression() ")"
+}
+
+void binary_set_function_type():
+{}
+{
+    "COVAR_POP"
+  | "COVAR_SAMP"
+  | "CORR"
+  | "REGR_SLOPE"
+  | "REGR_INTERCEPT"
+  | "REGR_COUNT"
+  | "REGR_R2"
+  | "REGR_AVGX"
+  | "REGR_AVGY"
+  | "REGR_SXX"
+  | "REGR_SYY"
+  | "REGR_SXY"
+}
+
+void dependent_variable_expression():
+{}
+{
+    numeric_value_expression()
+}
+
+void independent_variable_expression():
+{}
+{
+    numeric_value_expression()
+}
+
+void ordered_set_function():
+{}
+{
+    hypothetical_set_function()
+  | inverse_distribution_function()
+}
+
+void hypothetical_set_function():
+{}
+{
+    rank_function_type() "("
+    hypothetical_set_function_value_expression_list() ")"
+    within_group_specification()
+}
+
+void within_group_specification() #Unsupported:
+{}
+{
+    "WITHIN" "GROUP" "(" "ORDER" "BY" sort_specification_list() ")"
+}
+
+void hypothetical_set_function_value_expression_list():
+{}
+{
+    value_expression() ( "," value_expression() )*
+}
+
+void inverse_distribution_function():
+{}
+{
+    inverse_distribution_function_type() "("
+    inverse_distribution_function_argument() ")"
+    within_group_specification()
+}
+
+void inverse_distribution_function_argument():
+{}
+{
+    numeric_value_expression()
+}
+
+void inverse_distribution_function_type():
+{}
+{
+    "PERCENTILE_CONT"
+  | "PERCENTILE_DISC"
+}
+
+void array_aggregate_function():
+{}
+{
+    "ARRAY_AGG"
+    "("
+    [ distinct() ]  // Non-standard
+    value_expression() [ "ORDER" "BY" sort_specification_list() ]
+    ")"
+}
+
+void sort_specification_list() #SortSpecificationList:
+{}
+{
+    sort_specification() ( "," sort_specification() )*
+}
+
+void sort_specification() #SortSpecification:
+{}
+{
+    sort_key() [ ordering_specification() ] [ null_ordering() ]
+}
+
+void sort_key():
+{}
+{
+    value_expression()
+}
+
+void ordering_specification() #OrderingDirection:
+{}
+{
+    "ASC"
+  | "DESC"
+}
+
+void null_ordering() #NullOrdering:
+{}
+{
+    "NULLS" "FIRST"
+  | "NULLS" "LAST"
+}
+
+void schema_definition() #CreateSchema:
+{}
+{
+    "CREATE" "SCHEMA"
+
+    [ if_not_exists() ]
+
+    schema_name_clause()
+    [ schema_character_set_or_path() ]
+    ( schema_element() )*
+}
+
+void schema_character_set_or_path() #Unsupported:
+{}
+{
+    schema_character_set_specification()
+  | schema_path_specification()
+  | schema_character_set_specification() schema_path_specification()
+  | schema_path_specification() schema_character_set_specification()
+}
+
+void schema_name_clause():
+{}
+{
+    schema_name()
+  | ( "AUTHORIZATION" identifier() )#Unsuppoerted
+  | ( schema_name() "AUTHORIZATION" identifier() )#Unsuppoerted
+}
+
+void schema_character_set_specification():
+{}
+{
+    "DEFAULT" "CHARACTER" "SET" character_set_specification()
+}
+
+void schema_path_specification():
+{}
+{
+    path_specification()
+}
+
+void schema_element() #Unsupported:
+{}
+{
+    table_definition()
+  | LOOKAHEAD(4) view_definition()
+  | domain_definition()
+  | character_set_definition()
+  | collation_definition()
+  | transliteration_definition()
+  | assertion_definition()
+  | trigger_definition()
+  | user_defined_type_definition()
+  | user_defined_cast_definition()
+  | user_defined_ordering_definition()
+  | transform_definition()
+  | schema_routine()
+  | sequence_generator_definition()
+  | grant_statement()
+  | role_definition()
+}
+
+void drop_schema_statement():
+{}
+{
+    "DROP" "SCHEMA" schema_name() drop_behavior()
+}
+
+void drop_behavior():
+{}
+{
+    "CASCADE"
+  | "RESTRICT"
+}
+
+void table_definition() #TableDefinition:
+{}
+{
+    "CREATE" [ table_scope() ] "TABLE"
+
+    [ if_not_exists() ]
+
+    table_name()
+
+    [ table_description() ]
+
+    ( // Non-standard
+      LOOKAHEAD ("WITH")
+      [ "WITH"
+        ( system_versioning_clause()
+        | table_attributes()  // Non-standard
+        )
+      ]
+      table_contents_source()
+    |
+      table_contents_source()
+      [ table_description() ]
+      [ "WITH"
+        ( system_versioning_clause()
+        | table_attributes()  // Non-standard
+        )
+      ]
+    )
+    [ "ON" "COMMIT" table_commit_action() "ROWS" ]
+}
+
+void table_contents_source():
+{}
+{
+    typed_table_clause()
+  | as_subquery_clause()
+  | table_element_list()
+}
+
+void table_scope():
+{}
+{
+    global_or_local() "TEMPORARY"
+}
+
+void global_or_local():
+{}
+{
+    "GLOBAL"
+  | "LOCAL"
+}
+
+void system_versioning_clause():
+{}
+{
+    "SYSTEM" "VERSIONING" [ retention_period_specification() ]
+}
+
+void retention_period_specification():
+{}
+{
+    "KEEP" "VERSIONS" "FOREVER"
+  | "KEEP" "VERSIONS" "FOR" length_of_time() time_unit()
+}
+
+void length_of_time():
+{}
+{
+    <unsigned_integer>
+}
+
+void time_unit():
+{}
+{
+    "SECOND" |"SECONDS" |"MINUTE" |"MINUTES" |"HOUR" |"HOURS" |"DAY" |"DAYS" |"MONTH" |"MONTHS" |"YEAR" |"YEARS"
+}
+
+void table_commit_action():
+{}
+{
+    "PRESERVE"
+  | "DELETE"
+}
+
+void table_element_list():
+{}
+{
+     "(" table_element() ( "," table_element() )* ")"
+}
+
+void table_element():
+{}
+{
+    column_definition()
+  | table_constraint_definition()
+  | like_clause()
+}
+
+void typed_table_clause():
+{}
+{
+    "OF" path_resolved_user_defined_type_name() [ subtable_clause() ]
+    [ typed_table_element_list() ]
+}
+
+void typed_table_element_list():
+{}
+{
+     "(" typed_table_element()
+     ( "," typed_table_element() )* ")"
+}
+
+void typed_table_element():
+{}
+{
+    column_options()
+  | table_constraint_definition()
+  | self_referencing_column_specification()
+}
+
+void self_referencing_column_specification():
+{}
+{
+    "REF" "IS" identifier() [ reference_generation() ]
+}
+
+void reference_generation():
+{}
+{
+    "SYSTEM" "GENERATED"
+  | "USER" "GENERATED"
+  | "DERIVED"
+}
+
+void column_options():
+{}
+{
+    identifier() "WITH" "OPTIONS" column_option_list()
+}
+
+void column_option_list():
+{}
+{
+    [ scope_clause() ] [ default_clause() ] ( column_constraint_definition() )*
+}
+
+void subtable_clause():
+{}
+{
+    "UNDER" supertable_clause()
+}
+
+void supertable_clause():
+{}
+{
+    supertable_name()
+}
+
+void supertable_name():
+{}
+{
+    table_name()
+}
+
+void like_clause():
+{}
+{
+    "LIKE" table_name() [ like_options() ]
+}
+
+void like_options():
+{}
+{
+    ( like_option() )+
+}
+
+void like_option():
+{}
+{
+    identity_option()
+  | column_default_option()
+  | generation_option()
+  | "INCLUDING" "PROPERTIES"  // Non-standard
+}
+
+void identity_option():
+{}
+{
+    "INCLUDING" "IDENTITY"
+  | "EXCLUDING" "IDENTITY"
+}
+
+void column_default_option():
+{}
+{
+    "INCLUDING" "DEFAULTS"
+  | "EXCLUDING" "DEFAULTS"
+}
+
+void generation_option():
+{}
+{
+    "INCLUDING" "GENERATED"
+  | "EXCLUDING" "GENERATED"
+}
+
+void as_subquery_clause():
+{}
+{
+    [ "(" column_name_list() ")" ]
+
+    [ "WITH" table_attributes() ]  // Non-standard
+
+    "AS"
+
+    (
+      subquery()
+    | query_expression() // Non-standard
+    )
+
+    [ with_or_without_data() ]
+}
+
+void with_or_without_data():
+{}
+{
+    "WITH" "NO" "DATA"
+  | "WITH" "DATA"
+}
+
+void column_definition():
+{}
+{
+    identifier()
+    [ data_type_or_schema_qualified_name() ]
+    [ default_clause() | identity_column_specification() | generation_clause()
+    | system_version_start_column_specification() | system_version_end_column_specification()
+    ]
+    ( column_constraint_definition() )*
+    [ collate_clause() ]
+
+    [ column_description() ]
+}
+
+void data_type_or_schema_qualified_name():
+{}
+{
+    data_type()
+  | schema_qualified_name()
+}
+
+void system_version_start_column_specification():
+{}
+{
+    timestamp_generation_rule() "AS" "SYSTEM" "VERSION" "START"
+}
+
+void system_version_end_column_specification():
+{}
+{
+    timestamp_generation_rule() "AS" "SYSTEM" "VERSION" "END"
+}
+
+void timestamp_generation_rule():
+{}
+{
+    "GENERATED" "ALWAYS"
+}
+
+void column_constraint_definition():
+{}
+{
+    [ constraint_name_definition() ] column_constraint() [ constraint_characteristics() ]
+}
+
+void column_constraint():
+{}
+{
+    "NOT" "NULL"
+  | unique_specification()
+  | references_specification()
+  | check_constraint_definition()
+}
+
+void identity_column_specification():
+{}
+{
+    "GENERATED" ( "ALWAYS" | "BY" "DEFAULT" ) "AS" "IDENTITY"
+    [ "(" common_sequence_generator_options() ")" ]
+}
+
+void generation_clause():
+{}
+{
+    generation_rule() "AS" generation_expression()
+}
+
+void generation_rule():
+{}
+{
+    "GENERATED" "ALWAYS"
+}
+
+void generation_expression():
+{}
+{
+     "(" value_expression() ")"
+}
+
+void default_clause():
+{}
+{
+    "DEFAULT" default_option()
+}
+
+void default_option():
+{}
+{
+    literal()
+  | datetime_value_function()
+  | "USER"
+  | "CURRENT_USER"
+  | "CURRENT_ROLE"
+  | "SESSION_USER"
+  | "SYSTEM_USER"
+  | "CURRENT_CATALOG"
+  | "CURRENT_SCHEMA"
+  | "CURRENT_PATH"
+  | implicitly_typed_value_specification()
+}
+
+void table_constraint_definition():
+{}
+{
+    [ constraint_name_definition() ] table_constraint()
+    [ constraint_characteristics() ]
+}
+
+void table_constraint():
+{}
+{
+    unique_constraint_definition()
+  | referential_constraint_definition()
+  | check_constraint_definition()
+}
+
+void unique_constraint_definition():
+{}
+{
+    unique_specification() "(" unique_column_list() ")"
+  | "UNIQUE" ( "VALUE" )
+}
+
+void unique_specification():
+{}
+{
+    "UNIQUE"
+  | "PRIMARY" "KEY"
+}
+
+void unique_column_list():
+{}
+{
+    column_name_list()
+}
+
+void referential_constraint_definition():
+{}
+{
+    "FOREIGN" "KEY" "(" referencing_columns() ")"
+    references_specification()
+}
+
+void references_specification():
+{}
+{
+    "REFERENCES" referenced_table_and_columns()
+    [ "MATCH" match_type() ] [ referential_triggered_action() ]
+}
+
+void match_type():
+{}
+{
+    "FULL"
+  | "PARTIAL"
+  | "SIMPLE"
+}
+
+void referencing_columns():
+{}
+{
+    reference_column_list()
+}
+
+void referenced_table_and_columns():
+{}
+{
+    table_name() [ "(" reference_column_list() ")" ]
+}
+
+void reference_column_list():
+{}
+{
+    column_name_list()
+}
+
+void referential_triggered_action():
+{}
+{
+    update_rule() [ delete_rule() ]
+  | delete_rule() [ update_rule() ]
+}
+
+void update_rule():
+{}
+{
+    "ON" "UPDATE" referential_action()
+}
+
+void delete_rule():
+{}
+{
+    "ON" "DELETE" referential_action()
+}
+
+void referential_action():
+{}
+{
+    "CASCADE"
+  | "SET" "NULL"
+  | "SET" "DEFAULT"
+  | "RESTRICT"
+  | "NO" "ACTION"
+}
+
+void check_constraint_definition():
+{}
+{
+    "CHECK" "(" search_condition() ")"
+}
+
+void alter_table_statement():
+{}
+{
+    "ALTER" "TABLE" table_name() alter_table_action()
+}
+
+void alter_table_action():
+{}
+{
+    add_column_definition()
+  | alter_column_definition()
+  | drop_column_definition()
+  | add_table_constraint_definition()
+  | alter_table_constraint_definition()
+  | drop_table_constraint_definition()
+  | add_system_versioning_clause()
+  | alter_system_versioning_clause()
+  | drop_system_versioning_clause()
+}
+
+void add_column_definition():
+{}
+{
+    "ADD" [ "COLUMN" ] column_definition()
+}
+
+void alter_column_definition():
+{}
+{
+    "ALTER" [ "COLUMN" ] identifier() alter_column_action()
+}
+
+void alter_column_action():
+{}
+{
+    set_column_default_clause()
+  | drop_column_default_clause()
+  | set_column_not_null_clause()
+  | drop_column_not_null_clause()
+  | add_column_scope_clause()
+  | drop_column_scope_clause()
+  | alter_column_data_type_clause()
+  | alter_identity_column_specification()
+  | drop_identity_property_clause()
+  | drop_column_generation_expression_clause()
+}
+
+void set_column_default_clause():
+{}
+{
+    "SET" default_clause()
+}
+
+void drop_column_default_clause():
+{}
+{
+    "DROP" "DEFAULT"
+}
+
+void set_column_not_null_clause():
+{}
+{
+    "SET" "NOT" "NULL"
+}
+
+void drop_column_not_null_clause():
+{}
+{
+    "DROP" "NOT" "NULL"
+}
+
+void add_column_scope_clause():
+{}
+{
+    "ADD" scope_clause()
+}
+
+void drop_column_scope_clause():
+{}
+{
+    "DROP" "SCOPE" drop_behavior()
+}
+
+void alter_column_data_type_clause():
+{}
+{
+    "SET" "DATA" "TYPE" data_type()
+}
+
+void alter_identity_column_specification():
+{}
+{
+    set_identity_column_generation_clause() ( alter_identity_column_option() )*
+  | ( alter_identity_column_option() )+
+}
+
+void set_identity_column_generation_clause():
+{}
+{
+    "SET" "GENERATED" ( "ALWAYS" | "BY" "DEFAULT" )
+}
+
+void alter_identity_column_option():
+{}
+{
+    alter_sequence_generator_restart_option()
+  | "SET" basic_sequence_generator_option()
+}
+
+void drop_identity_property_clause():
+{}
+{
+    "DROP" "IDENTITY"
+}
+
+void drop_column_generation_expression_clause():
+{}
+{
+    "DROP" "EXPRESSION"
+}
+
+void drop_column_definition():
+{}
+{
+    "DROP" [ "COLUMN" ] identifier() drop_behavior()
+}
+
+void add_table_constraint_definition():
+{}
+{
+    "ADD" table_constraint_definition()
+}
+
+void alter_table_constraint_definition():
+{}
+{
+    "ALTER" "CONSTRAINT" schema_qualified_name() constraint_enforcement()
+}
+
+void drop_table_constraint_definition():
+{}
+{
+    "DROP" "CONSTRAINT" schema_qualified_name() drop_behavior()
+}
+
+void add_system_versioning_clause():
+{}
+{
+    "ADD" system_versioning_clause() add_system_version_column_list()
+}
+
+void add_system_version_column_list():
+{}
+{
+    "ADD" [ "COLUMN" ] column_definition_1() "ADD" [ "COLUMN" ] column_definition_2()
+}
+
+void column_definition_1():
+{}
+{
+    column_definition()
+}
+
+void column_definition_2():
+{}
+{
+    column_definition()
+}
+
+void alter_system_versioning_clause():
+{}
+{
+    "ALTER" "SYSTEM" "VERSIONING" retention_period_specification()
+}
+
+void drop_system_versioning_clause():
+{}
+{
+    "DROP" "SYSTEM" "VERSIONING" drop_behavior()
+}
+
+void drop_table_statement():
+{}
+{
+    "DROP" "TABLE"
+    [ "IF" "EXISTS" ]  // Non-standard
+    table_name()
+    [ drop_behavior() ]  // Non-standard
+}
+
+void view_definition():
+{}
+{
+    "CREATE"
+    [ or_replace() ]
+    [ "RECURSIVE" ] "VIEW" table_name() view_specification()
+    "AS" query_expression() [ "WITH" [ levels_clause() ] "CHECK" "OPTION" ]
+}
+
+void view_specification():
+{}
+{
+    regular_view_specification()
+  | referenceable_view_specification()
+}
+
+void regular_view_specification():
+{}
+{
+    [ "(" view_column_list() ")" ]
+}
+
+void referenceable_view_specification():
+{}
+{
+    "OF" path_resolved_user_defined_type_name() [ subview_clause() ]
+    [ view_element_list() ]
+}
+
+void subview_clause():
+{}
+{
+    "UNDER" table_name()
+}
+
+void view_element_list():
+{}
+{
+     "(" view_element() ( "," view_element() )* ")"
+}
+
+void view_element():
+{}
+{
+    self_referencing_column_specification()
+  | view_column_option()
+}
+
+void view_column_option():
+{}
+{
+    identifier() "WITH" "OPTIONS" scope_clause()
+}
+
+void levels_clause() #Unsupported:
+{}
+{
+    "CASCADED"
+  | "LOCAL"
+}
+
+void view_column_list():
+{}
+{
+    column_name_list()
+}
+
+void drop_view_statement():
+{}
+{
+    "DROP" "VIEW" table_name() drop_behavior()
+}
+
+void domain_definition():
+{}
+{
+    "CREATE" "DOMAIN" schema_qualified_name() [ "AS" ] predefined_type()
+    [ default_clause() ]
+     ( domain_constraint() )*
+    [ collate_clause() ]
+}
+
+void domain_constraint():
+{}
+{
+    [ constraint_name_definition() ] check_constraint_definition() [
+    constraint_characteristics() ]
+}
+
+void alter_domain_statement():
+{}
+{
+    "ALTER" "DOMAIN" schema_qualified_name() alter_domain_action()
+}
+
+void alter_domain_action():
+{}
+{
+    set_domain_default_clause()
+  | drop_domain_default_clause()
+  | add_domain_constraint_definition()
+  | drop_domain_constraint_definition()
+}
+
+void set_domain_default_clause():
+{}
+{
+    "SET" default_clause()
+}
+
+void drop_domain_default_clause():
+{}
+{
+    "DROP" "DEFAULT"
+}
+
+void add_domain_constraint_definition():
+{}
+{
+    "ADD" domain_constraint()
+}
+
+void drop_domain_constraint_definition():
+{}
+{
+    "DROP" "CONSTRAINT" schema_qualified_name()
+}
+
+void drop_domain_statement():
+{}
+{
+    "DROP" "DOMAIN" schema_qualified_name() drop_behavior()
+}
+
+void character_set_definition():
+{}
+{
+    "CREATE" "CHARACTER" "SET" character_set_name() [ "AS" ]
+    character_set_source() [ collate_clause() ]
+}
+
+void character_set_source():
+{}
+{
+    "GET" character_set_specification()
+}
+
+void drop_character_set_statement():
+{}
+{
+    "DROP" "CHARACTER" "SET" character_set_name()
+}
+
+void collation_definition():
+{}
+{
+    "CREATE" "COLLATION" schema_qualified_name() "FOR" character_set_specification()
+    "FROM" schema_qualified_name() [ pad_characteristic() ]
+}
+
+void pad_characteristic():
+{}
+{
+    "NO" "PAD"
+  | "PAD" "SPACE"
+}
+
+void drop_collation_statement():
+{}
+{
+    "DROP" "COLLATION" schema_qualified_name() drop_behavior()
+}
+
+void transliteration_definition():
+{}
+{
+    "CREATE" "TRANSLATION" schema_qualified_name() "FOR" source_character_set_specification()
+    "TO" target_character_set_specification() "FROM" transliteration_source()
+}
+
+void source_character_set_specification():
+{}
+{
+    character_set_specification()
+}
+
+void target_character_set_specification():
+{}
+{
+    character_set_specification()
+}
+
+void transliteration_source():
+{}
+{
+    schema_qualified_name()
+  | transliteration_routine()
+}
+
+
+void transliteration_routine():
+{}
+{
+    specific_routine_designator()
+}
+
+void drop_transliteration_statement():
+{}
+{
+    "DROP" "TRANSLATION" schema_qualified_name()
+}
+
+void assertion_definition():
+{}
+{
+    "CREATE" "ASSERTION" schema_qualified_name()
+    "CHECK" "(" search_condition() ")"
+    [ constraint_characteristics() ]
+}
+
+void drop_assertion_statement():
+{}
+{
+    "DROP" "ASSERTION" schema_qualified_name() [ drop_behavior() ]
+}
+
+void trigger_definition():
+{}
+{
+    "CREATE" "TRIGGER" schema_qualified_name() trigger_action_time() trigger_event()
+    "ON" table_name() [ "REFERENCING" transition_table_or_variable_list() ]
+    triggered_action()
+}
+
+void trigger_action_time():
+{}
+{
+    "BEFORE"
+  | "AFTER"
+  | "INSTEAD" "OF"
+}
+
+void trigger_event():
+{}
+{
+    "INSERT"
+  | "DELETE"
+  | "UPDATE" [ "OF" trigger_column_list() ]
+}
+
+void trigger_column_list():
+{}
+{
+    column_name_list()
+}
+
+void triggered_action():
+{}
+{
+    [ "FOR" "EACH" ( "ROW" | "STATEMENT" ) ]
+    [ triggered_when_clause() ]
+    triggered_SQL_statement()
+}
+
+void triggered_when_clause():
+{}
+{
+    "WHEN" "(" search_condition() ")"
+}
+
+void triggered_SQL_statement():
+{}
+{
+    SQL_procedure_statement()
+  | "BEGIN" "ATOMIC" ( SQL_procedure_statement() ";" )+ "END"
+}
+
+void transition_table_or_variable_list():
+{}
+{
+    ( transition_table_or_variable() )+
+}
+
+void transition_table_or_variable():
+{}
+{
+    "OLD" [ "ROW" ] [ "AS" ] identifier()
+  | "NEW" [ "ROW" ] [ "AS" ] identifier()
+  | "OLD" "TABLE" [ "AS" ] identifier()
+  | "NEW" "TABLE" [ "AS" ] identifier()
+}
+
+void drop_trigger_statement():
+{}
+{
+    "DROP" "TRIGGER" schema_qualified_name()
+}
+
+void user_defined_type_definition():
+{}
+{
+    "CREATE" "TYPE" user_defined_type_body()
+}
+
+void user_defined_type_body():
+{}
+{
+    schema_resolved_user_defined_type_name()
+    [ subtype_clause() ]
+    [ "AS" representation() ]
+    [ user_defined_type_option_list() ]
+    [ method_specification_list() ]
+}
+
+void user_defined_type_option_list():
+{}
+{
+    user_defined_type_option() ( user_defined_type_option() )*
+}
+
+void user_defined_type_option():
+{}
+{
+    instantiable_clause()
+  | finality()
+  | reference_type_specification()
+  | cast_to_ref()
+  | cast_to_type()
+  | cast_to_distinct()
+  | cast_to_source()
+}
+
+void subtype_clause():
+{}
+{
+    "UNDER" supertype_name()
+}
+
+void supertype_name():
+{}
+{
+    path_resolved_user_defined_type_name()
+}
+
+void representation():
+{}
+{
+    predefined_type()
+  | data_type() // TODO(kaikalur): fixit --collection_type()
+  | member_list()
+}
+
+void member_list():
+{}
+{
+     "(" member() ( "," member() )* ")"
+}
+
+void member():
+{}
+{
+    attribute_definition()
+}
+
+void instantiable_clause():
+{}
+{
+    "INSTANTIABLE"
+  | "NOT" "INSTANTIABLE"
+}
+
+void finality():
+{}
+{
+    "FINAL"
+  | "NOT" "FINAL"
+}
+
+void reference_type_specification():
+{}
+{
+    user_defined_representation()
+  | derived_representation()
+  | system_generated_representation()
+}
+
+void user_defined_representation():
+{}
+{
+    "REF" "USING" predefined_type()
+}
+
+void derived_representation():
+{}
+{
+    "REF" "FROM" list_of_attributes()
+}
+
+void system_generated_representation():
+{}
+{
+    "REF" "IS" "SYSTEM" "GENERATED"
+}
+
+void cast_to_ref():
+{}
+{
+    "CAST" "(" "SOURCE" "AS" "REF" ")" "WITH" identifier()
+}
+
+void cast_to_type():
+{}
+{
+    "CAST" "(" "REF" "AS" "SOURCE" ")" "WITH" identifier()
+}
+
+void list_of_attributes():
+{}
+{
+     "(" identifier() ( "," identifier() )* ")"
+}
+
+void cast_to_distinct():
+{}
+{
+    "CAST" "(" "SOURCE" "AS" "DISTINCT" ")"
+    "WITH" identifier()
+}
+
+void cast_to_source():
+{}
+{
+    "CAST" "(" "DISTINCT" "AS" "SOURCE" ")"
+    "WITH" identifier()
+}
+
+void method_specification_list():
+{}
+{
+    method_specification() ( "," method_specification() )*
+}
+
+void method_specification():
+{}
+{
+    original_method_specification()
+  | overriding_method_specification()
+}
+
+void original_method_specification():
+{}
+{
+    partial_method_specification() [ "SELF" "AS" "RESULT" ] [ "SELF" "AS" "LOCATOR" ]
+    [ method_characteristics() ]
+}
+
+void overriding_method_specification():
+{}
+{
+    "OVERRIDING" partial_method_specification()
+}
+
+void partial_method_specification():
+{}
+{
+    [ "INSTANCE" | "STATIC" | "CONSTRUCTOR" ]
+    "METHOD" identifier() SQL_parameter_declaration_list()
+    returns_clause()
+    [ "SPECIFIC" specific_identifier() ]
+}
+
+void specific_identifier():
+{}
+{
+    [ schema_name() "." ]identifier()
+}
+
+void method_characteristics():
+{}
+{
+    ( method_characteristic() )+
+}
+
+void method_characteristic():
+{}
+{
+    language_clause()
+  | parameter_style_clause()
+  | deterministic_characteristic()
+  | SQL_data_access_indication()
+  | null_call_clause()
+}
+
+void attribute_definition():
+{}
+{
+    identifier() data_type()
+    [ attribute_default() ]
+    [ collate_clause() ]
+}
+
+void attribute_default():
+{}
+{
+    default_clause()
+}
+
+void alter_type_statement():
+{}
+{
+    "ALTER" "TYPE" schema_resolved_user_defined_type_name() alter_type_action()
+}
+
+void alter_type_action():
+{}
+{
+    add_attribute_definition()
+  | drop_attribute_definition()
+  | add_original_method_specification()
+  | add_overriding_method_specification()
+  | drop_method_specification()
+}
+
+void add_attribute_definition():
+{}
+{
+    "ADD" "ATTRIBUTE" attribute_definition()
+}
+
+void drop_attribute_definition():
+{}
+{
+    "DROP" "ATTRIBUTE" identifier() "RESTRICT"
+}
+
+void add_original_method_specification():
+{}
+{
+    "ADD" original_method_specification()
+}
+
+void add_overriding_method_specification():
+{}
+{
+    "ADD" overriding_method_specification()
+}
+
+void drop_method_specification():
+{}
+{
+    "DROP" specific_method_specification_designator() "RESTRICT"
+}
+
+void specific_method_specification_designator():
+{}
+{
+    [ "INSTANCE" | "STATIC" | "CONSTRUCTOR" ]
+    "METHOD" identifier() data_type_list()
+}
+
+void drop_data_type_statement():
+{}
+{
+    "DROP" "TYPE" schema_resolved_user_defined_type_name() drop_behavior()
+}
+
+void SQL_invoked_routine():
+{}
+{
+    schema_routine()
+}
+
+void schema_routine():
+{}
+{
+    schema_procedure()
+  | schema_function()
+}
+
+void schema_procedure():
+{}
+{
+    "CREATE" SQL_invoked_procedure()
+}
+
+void schema_function():
+{}
+{
+    "CREATE"
+    [ or_replace() ]
+    SQL_invoked_function()
+}
+
+void SQL_invoked_procedure():
+{}
+{
+    "PROCEDURE" schema_qualified_name() SQL_parameter_declaration_list()
+    routine_characteristics()
+    routine_body()
+}
+
+void SQL_invoked_function():
+{}
+{
+    ( function_specification() | method_specification_designator() ) routine_body()
+}
+
+void SQL_parameter_declaration_list():
+{}
+{
+     "(" [ SQL_parameter_declaration()
+     ( "," SQL_parameter_declaration() )* ] ")"
+}
+
+void SQL_parameter_declaration():
+{}
+{
+    [ parameter_mode() ]
+    [ identifier() ]
+    parameter_type() [ "RESULT" ]
+    [ "DEFAULT" parameter_default() ]
+}
+
+void parameter_default():
+{}
+{
+    value_expression()
+  | contextually_typed_value_specification()
+}
+
+void parameter_mode():
+{}
+{
+    "IN"
+  | "OUT"
+  | "INOUT"
+}
+
+void parameter_type():
+{}
+{
+    data_type() [ locator_indication() ]
+}
+
+void locator_indication():
+{}
+{
+    "AS" "LOCATOR"
+}
+
+void function_specification():
+{}
+{
+    "FUNCTION" schema_qualified_name() SQL_parameter_declaration_list()
+    returns_clause()
+    [ routine_description() ]
+    routine_characteristics()
+    [ dispatch_clause() ]
+}
+
+void method_specification_designator():
+{}
+{
+    "SPECIFIC" "METHOD" specific_identifier()
+  | [ "INSTANCE" | "STATIC" | "CONSTRUCTOR" ]
+    "METHOD" identifier() SQL_parameter_declaration_list()
+    [ returns_clause() ]
+    "FOR" schema_resolved_user_defined_type_name()
+}
+
+void routine_characteristics():
+{}
+{
+     ( routine_characteristic() )*
+}
+
+void routine_characteristic():
+{}
+{
+    language_clause()
+  | parameter_style_clause()
+  | "SPECIFIC" schema_qualified_name()
+  | deterministic_characteristic()
+  | SQL_data_access_indication()
+  | null_call_clause()
+  | returned_result_sets_characteristic()
+  | savepoint_level_indication()
+}
+
+void savepoint_level_indication():
+{}
+{
+    "NEW" "SAVEPOINT" "LEVEL"
+  | "OLD" "SAVEPOINT" "LEVEL"
+}
+
+void returned_result_sets_characteristic():
+{}
+{
+    "DYNAMIC" "RESULT" "SETS" maximum_returned_result_sets()
+}
+
+void parameter_style_clause():
+{}
+{
+    "PARAMETER" "STYLE" parameter_style()
+}
+
+void dispatch_clause():
+{}
+{
+    "STATIC" "DISPATCH"
+}
+
+void returns_clause():
+{}
+{
+    "RETURNS" returns_type()
+}
+
+void returns_type():
+{}
+{
+    returns_data_type() [ result_cast() ]
+  | returns_table_type()
+}
+
+void returns_table_type():
+{}
+{
+    "TABLE" table_function_column_list()
+}
+
+void table_function_column_list():
+{}
+{
+     "(" table_function_column_list_element()
+     ( "," table_function_column_list_element() )* ")"
+}
+
+void table_function_column_list_element():
+{}
+{
+    identifier() data_type()
+}
+
+void result_cast():
+{}
+{
+    "CAST" "FROM" result_cast_from_type()
+}
+
+void result_cast_from_type():
+{}
+{
+    data_type() [ locator_indication() ]
+}
+
+void returns_data_type():
+{}
+{
+    data_type() [ locator_indication() ]
+}
+
+void routine_body():
+{}
+{
+    SQL_routine_spec()
+  | external_body_reference()
+}
+
+void SQL_routine_spec():
+{}
+{
+    [ rights_clause() ] SQL_routine_body()
+}
+
+void rights_clause():
+{}
+{
+    "SQL" "SECURITY" "INVOKER"
+  | "SQL" "SECURITY" "DEFINER"
+}
+
+void SQL_routine_body():
+{}
+{
+    SQL_procedure_statement()
+}
+
+void external_body_reference():
+{}
+{
+    "EXTERNAL" [ "NAME" external_routine_name() ]
+    [ parameter_style_clause() ]
+    [ transform_group_specification() ]
+    [ external_security_clause() ]
+}
+
+void external_security_clause():
+{}
+{
+    "EXTERNAL" "SECURITY" "DEFINER"
+  | "EXTERNAL" "SECURITY" "INVOKER"
+  | "EXTERNAL" "SECURITY" "IMPLEMENTATION" "DEFINED"
+}
+
+void parameter_style():
+{}
+{
+    "SQL"
+  | "GENERAL"
+}
+
+void deterministic_characteristic():
+{}
+{
+    "DETERMINISTIC"
+  | "NOT" "DETERMINISTIC"
+}
+
+void SQL_data_access_indication():
+{}
+{
+    "NO" "SQL"
+  | "CONTAINS" "SQL"
+  | "READS" "SQL" "DATA"
+  | "MODIFIES" "SQL" "DATA"
+}
+
+void null_call_clause():
+{}
+{
+    "RETURNS" "NULL" "ON" "NULL" "INPUT"
+  | "CALLED" "ON" "NULL" "INPUT"
+}
+
+void maximum_returned_result_sets():
+{}
+{
+    <unsigned_integer>
+}
+
+void transform_group_specification():
+{}
+{
+    "TRANSFORM" "GROUP" ( single_group_specification() | multiple_group_specification() )
+}
+
+void single_group_specification():
+{}
+{
+    identifier()
+}
+
+void multiple_group_specification():
+{}
+{
+    group_specification() ( "," group_specification() )*
+}
+
+void group_specification():
+{}
+{
+    identifier() "FOR" "TYPE" path_resolved_user_defined_type_name()
+}
+
+void alter_routine_statement():
+{}
+{
+    "ALTER" specific_routine_designator()
+    alter_routine_characteristics() alter_routine_behavior()
+}
+
+void alter_routine_characteristics():
+{}
+{
+    ( alter_routine_characteristic() )+
+}
+
+void alter_routine_characteristic():
+{}
+{
+    language_clause()
+  | parameter_style_clause()
+  | SQL_data_access_indication()
+  | null_call_clause()
+  | returned_result_sets_characteristic()
+  | "NAME" external_routine_name()
+}
+
+void alter_routine_behavior():
+{}
+{
+    "RESTRICT"
+}
+
+void drop_routine_statement():
+{}
+{
+    "DROP" specific_routine_designator() drop_behavior()
+}
+
+void user_defined_cast_definition():
+{}
+{
+    "CREATE" "CAST" "(" source_data_type() "AS" target_data_type() ")"
+    "WITH" cast_function()
+    [ "AS" "ASSIGNMENT" ]
+}
+
+void cast_function():
+{}
+{
+    specific_routine_designator()
+}
+
+void source_data_type():
+{}
+{
+    data_type()
+}
+
+void target_data_type():
+{}
+{
+    data_type()
+}
+
+void drop_user_defined_cast_statement():
+{}
+{
+    "DROP" "CAST" "(" source_data_type() "AS" target_data_type() ")"
+    drop_behavior()
+}
+
+void user_defined_ordering_definition():
+{}
+{
+    "CREATE" "ORDERING" "FOR" schema_resolved_user_defined_type_name() ordering_form()
+}
+
+void ordering_form():
+{}
+{
+    equals_ordering_form()
+  | full_ordering_form()
+}
+
+void equals_ordering_form():
+{}
+{
+    "EQUALS" "ONLY" "BY" ordering_category()
+}
+
+void full_ordering_form():
+{}
+{
+    "ORDER" "FULL" "BY" ordering_category()
+}
+
+void ordering_category():
+{}
+{
+    relative_category()
+  | map_category()
+  | state_category()
+}
+
+void relative_category():
+{}
+{
+    "RELATIVE" "WITH" relative_function_specification()
+}
+
+void map_category():
+{}
+{
+    "MAP" "WITH" map_function_specification()
+}
+
+void state_category():
+{}
+{
+    "STATE" [ schema_qualified_name() ]
+}
+
+void relative_function_specification():
+{}
+{
+    specific_routine_designator()
+}
+
+void map_function_specification():
+{}
+{
+    specific_routine_designator()
+}
+
+void drop_user_defined_ordering_statement():
+{}
+{
+    "DROP" "ORDERING" "FOR" schema_resolved_user_defined_type_name() drop_behavior()
+}
+
+void transform_definition():
+{}
+{
+    "CREATE" ( "TRANSFORM" | "TRANSFORMS" ) "FOR"
+    schema_resolved_user_defined_type_name() ( transform_group() )+
+}
+
+void transform_group():
+{}
+{
+    identifier() "(" transform_element_list() ")"
+}
+
+void transform_element_list():
+{}
+{
+    transform_element() [ "," transform_element() ]
+}
+
+void transform_element():
+{}
+{
+    to_sql()
+  | from_sql()
+}
+
+void to_sql():
+{}
+{
+    "TO" "SQL" "WITH" to_sql_function()
+}
+
+void from_sql():
+{}
+{
+    "FROM" "SQL" "WITH" from_sql_function()
+}
+
+void to_sql_function():
+{}
+{
+    specific_routine_designator()
+}
+
+void from_sql_function():
+{}
+{
+    specific_routine_designator()
+}
+
+void alter_transform_statement():
+{}
+{
+    "ALTER" ( "TRANSFORM" | "TRANSFORMS" )
+    "FOR" schema_resolved_user_defined_type_name() ( alter_group() )+
+}
+
+void alter_group():
+{}
+{
+    identifier() "(" alter_transform_action_list() ")"
+}
+
+void alter_transform_action_list():
+{}
+{
+    alter_transform_action() ( "," alter_transform_action() )*
+}
+
+void alter_transform_action():
+{}
+{
+    add_transform_element_list()
+  | drop_transform_element_list()
+}
+
+void add_transform_element_list():
+{}
+{
+    "ADD" "(" transform_element_list() ")"
+}
+
+void drop_transform_element_list():
+{}
+{
+    "DROP" "(" transform_kind()
+    [ "," transform_kind() ] drop_behavior() ")"
+}
+
+void transform_kind():
+{}
+{
+    "TO" "SQL"
+  | "FROM" "SQL"
+}
+
+void drop_transform_statement():
+{}
+{
+    "DROP" ( "TRANSFORM" | "TRANSFORMS" ) transforms_to_be_dropped()
+    "FOR" schema_resolved_user_defined_type_name() drop_behavior()
+}
+
+void transforms_to_be_dropped():
+{}
+{
+    "ALL"
+  | transform_group_element()
+}
+
+void transform_group_element():
+{}
+{
+    identifier()
+}
+
+void sequence_generator_definition():
+{}
+{
+    "CREATE" "SEQUENCE" schema_qualified_name() [ sequence_generator_options() ]
+}
+
+void sequence_generator_options():
+{}
+{
+    ( sequence_generator_option() )+
+}
+
+void sequence_generator_option():
+{}
+{
+    sequence_generator_data_type_option()
+  | common_sequence_generator_options()
+}
+
+void common_sequence_generator_options():
+{}
+{
+    ( common_sequence_generator_option() )+
+}
+
+void common_sequence_generator_option():
+{}
+{
+    sequence_generator_start_with_option()
+  | basic_sequence_generator_option()
+}
+
+void basic_sequence_generator_option():
+{}
+{
+    sequence_generator_increment_by_option()
+  | sequence_generator_maxvalue_option()
+  | sequence_generator_minvalue_option()
+  | sequence_generator_cycle_option()
+}
+
+void sequence_generator_data_type_option():
+{}
+{
+    "AS" data_type()
+}
+
+void sequence_generator_start_with_option():
+{}
+{
+    "START" "WITH" sequence_generator_start_value()
+}
+
+void sequence_generator_start_value():
+{}
+{
+    signed_numeric_literal()
+}
+
+void sequence_generator_increment_by_option():
+{}
+{
+    "INCREMENT" "BY" sequence_generator_increment()
+}
+
+void sequence_generator_increment():
+{}
+{
+    signed_numeric_literal()
+}
+
+void sequence_generator_maxvalue_option():
+{}
+{
+    "MAXVALUE" sequence_generator_max_value()
+  | "NO" "MAXVALUE"
+}
+
+void sequence_generator_max_value():
+{}
+{
+    signed_numeric_literal()
+}
+
+void sequence_generator_minvalue_option():
+{}
+{
+    "MINVALUE" sequence_generator_min_value()
+  | "NO" "MINVALUE"
+}
+
+void sequence_generator_min_value():
+{}
+{
+    signed_numeric_literal()
+}
+
+void sequence_generator_cycle_option():
+{}
+{
+    "CYCLE"
+  | "NO" "CYCLE"
+}
+
+void alter_sequence_generator_statement():
+{}
+{
+    "ALTER" "SEQUENCE" schema_qualified_name() alter_sequence_generator_options()
+}
+
+void alter_sequence_generator_options():
+{}
+{
+    ( alter_sequence_generator_option() )+
+}
+
+void alter_sequence_generator_option():
+{}
+{
+    alter_sequence_generator_restart_option()
+  | basic_sequence_generator_option()
+}
+
+void alter_sequence_generator_restart_option():
+{}
+{
+    "RESTART" [ "WITH" sequence_generator_restart_value() ]
+}
+
+void sequence_generator_restart_value():
+{}
+{
+    signed_numeric_literal()
+}
+
+void drop_sequence_generator_statement():
+{}
+{
+    "DROP" "SEQUENCE" schema_qualified_name() drop_behavior()
+}
+
+void grant_statement():
+{}
+{
+    grant_privilege_statement()
+  | grant_role_statement()
+}
+
+void grant_privilege_statement():
+{}
+{
+    "GRANT" privileges() "TO" grantee() ( "," grantee() )*
+    [ "WITH" "HIERARCHY" "OPTION" ]
+    [ "WITH" "GRANT" "OPTION" ]
+    [ "GRANTED" "BY" grantor() ]
+}
+
+void privileges():
+{}
+{
+    object_privileges() "ON" object_name()
+}
+
+void object_name():
+{}
+{
+    [ "TABLE" ] table_name()
+  | "DOMAIN" schema_qualified_name()
+  | "COLLATION" schema_qualified_name()
+  | "CHARACTER" "SET" character_set_name()
+  | "TRANSLATION" schema_qualified_name()
+  | "TYPE" schema_resolved_user_defined_type_name()
+  | "SEQUENCE" schema_qualified_name()
+  | specific_routine_designator()
+}
+
+void object_privileges():
+{}
+{
+    "ALL" "PRIVILEGES"
+  | action() ( "," action() )*
+}
+
+void action():
+{}
+{
+    "SELECT"
+  | "SELECT" "(" privilege_column_list() ")"
+  | "SELECT" "(" privilege_method_list() ")"
+  | "DELETE"
+  | "INSERT" [ "(" privilege_column_list() ")" ]
+  | "UPDATE" [ "(" privilege_column_list() ")" ]
+  | "REFERENCES" [ "(" privilege_column_list() ")" ]
+  | "USAGE"
+  | "TRIGGER"
+  | "UNDER"
+  | "EXECUTE"
+}
+
+void privilege_method_list():
+{}
+{
+    specific_routine_designator() ( "," specific_routine_designator() )*
+}
+
+void privilege_column_list():
+{}
+{
+    column_name_list()
+}
+
+void grantee():
+{}
+{
+    "PUBLIC"
+  | identifier()
+}
+
+void grantor():
+{}
+{
+    "CURRENT_USER"
+  | "CURRENT_ROLE"
+}
+
+void role_definition():
+{}
+{
+    "CREATE" "ROLE" identifier() [ "WITH" "ADMIN" grantor() ]
+}
+
+void grant_role_statement():
+{}
+{
+    "GRANT" identifier() ( "," identifier() )*
+    "TO" grantee() ( "," grantee() )*
+    [ "WITH" "ADMIN" "OPTION" ]
+    [ "GRANTED" "BY" grantor() ]
+}
+
+void drop_role_statement():
+{}
+{
+    "DROP" "ROLE" identifier()
+}
+
+void revoke_statement():
+{}
+{
+    revoke_privilege_statement()
+  | revoke_role_statement()
+}
+
+void revoke_privilege_statement():
+{}
+{
+    "REVOKE" [ revoke_option_extension() ] privileges()
+    "FROM" grantee() ( "," grantee() )*
+    [ "GRANTED" "BY" grantor() ]
+    drop_behavior()
+}
+
+void revoke_option_extension():
+{}
+{
+    "GRANT" "OPTION" "FOR"
+  | "HIERARCHY" "OPTION" "FOR"
+}
+
+void revoke_role_statement():
+{}
+{
+    "REVOKE" [ "ADMIN" "OPTION" "FOR" ] identifier() ( "," identifier() )*
+    "FROM" grantee() ( "," grantee() )*
+    [ "GRANTED" "BY" grantor() ]
+    drop_behavior()
+}
+
+void SQL_client_module_definition():
+{}
+{
+    module_name_clause() language_clause() module_authorization_clause()
+    [ module_path_specification() ]
+    [ module_transform_group_specification() ]
+    [ module_collations() ]
+     ( temporary_table_declaration() )*
+    ( module_contents() )+
+}
+
+void module_authorization_clause():
+{}
+{
+    "SCHEMA" schema_name()
+  | "AUTHORIZATION" identifier()
+    [ "FOR" "STATIC" ( "ONLY" | "AND" "DYNAMIC" ) ]
+  | "SCHEMA" schema_name() "AUTHORIZATION" identifier()
+    [ "FOR" "STATIC" ( "ONLY" | "AND" "DYNAMIC" ) ]
+}
+
+void module_path_specification():
+{}
+{
+    path_specification()
+}
+
+void module_transform_group_specification():
+{}
+{
+    transform_group_specification()
+}
+
+void module_collations():
+{}
+{
+    ( module_collation_specification() )+
+}
+
+void module_collation_specification():
+{}
+{
+    "COLLATION" schema_qualified_name() [ "FOR" character_set_specification_list() ]
+}
+
+void character_set_specification_list():
+{}
+{
+    character_set_specification() ( "," character_set_specification() )*
+}
+
+void module_contents():
+{}
+{
+    declare_cursor()
+  | dynamic_declare_cursor()
+  | externally_invoked_procedure()
+}
+
+void module_name_clause():
+{}
+{
+    "MODULE" [ identifier() ] [ module_character_set_specification() ]
+}
+
+void module_character_set_specification():
+{}
+{
+    "NAMES" "ARE" character_set_specification()
+}
+
+void externally_invoked_procedure():
+{}
+{
+    "PROCEDURE" identifier() host_parameter_declaration_list() ";"
+    SQL_procedure_statement() ";"
+}
+
+void host_parameter_declaration_list():
+{}
+{
+     "(" host_parameter_declaration()
+     ( "," host_parameter_declaration() )* ")"
+}
+
+void host_parameter_declaration():
+{}
+{
+    host_parameter_name() host_parameter_data_type()
+  | status_parameter()
+}
+
+void host_parameter_data_type():
+{}
+{
+    data_type() [ locator_indication() ]
+}
+
+void status_parameter():
+{}
+{
+    "SQLSTATE"
+}
+
+void SQL_procedure_statement():
+{}
+{
+    SQL_executable_statement()
+}
+
+void SQL_executable_statement():
+{}
+{
+    SQL_schema_statement()
+  | SQL_data_statement()
+  | SQL_control_statement()
+  | SQL_transaction_statement()
+  | SQL_connection_statement()
+  | SQL_session_statement()
+  | SQL_diagnostics_statement()
+  | SQL_dynamic_statement()
+}
+
+void SQL_schema_statement():
+{}
+{
+    SQL_schema_definition_statement()
+  | SQL_schema_manipulation_statement()
+}
+
+void SQL_schema_definition_statement():
+{}
+{
+    schema_definition()
+  | table_definition()
+  | LOOKAHEAD(4) view_definition()
+  | SQL_invoked_routine()
+  | grant_statement()
+  | role_definition()
+  | domain_definition()
+  | character_set_definition()
+  | collation_definition()
+  | transliteration_definition()
+  | assertion_definition()
+  | trigger_definition()
+  | user_defined_type_definition()
+  | user_defined_cast_definition()
+  | user_defined_ordering_definition()
+  | transform_definition()
+  | sequence_generator_definition()
+}
+
+void SQL_schema_manipulation_statement():
+{}
+{
+    drop_schema_statement()
+  | alter_table_statement()
+  | drop_table_statement()
+  | drop_view_statement()
+  | alter_routine_statement()
+  | drop_routine_statement()
+  | drop_user_defined_cast_statement()
+  | revoke_statement()
+  | drop_role_statement()
+  | alter_domain_statement()
+  | drop_domain_statement()
+  | drop_character_set_statement()
+  | drop_collation_statement()
+  | drop_transliteration_statement()
+  | drop_assertion_statement()
+  | drop_trigger_statement()
+  | alter_type_statement()
+  | drop_data_type_statement()
+  | drop_user_defined_ordering_statement()
+  | alter_transform_statement()
+  | drop_transform_statement()
+  | alter_sequence_generator_statement()
+  | drop_sequence_generator_statement()
+}
+
+void SQL_data_statement():
+{}
+{
+    open_statement()
+  | fetch_statement()
+  | close_statement()
+  | select_statement_single_row()
+  | SQL_data_change_statement()
+
+  //TODO(kaikalur):fix the next two
+  //| free_locator_statement()
+  //| hold_locator_statement()
+}
+
+void SQL_data_change_statement():
+{}
+{
+    delete_statement_positioned()
+  | delete_statement_searched()
+  | insert_statement()
+  | update_statement_positioned()
+  | update_statement_searched()
+  | truncate_table_statement()
+  | merge_statement()
+}
+
+void SQL_control_statement():
+{}
+{
+    call_statement()
+  | return_statement()
+}
+
+void SQL_transaction_statement():
+{}
+{
+    start_transaction_statement()
+  | set_transaction_statement()
+  | set_constraints_mode_statement()
+  | savepoint_statement()
+  | release_savepoint_statement()
+  | commit_statement()
+  | rollback_statement()
+}
+
+void SQL_connection_statement():
+{}
+{
+    connect_statement()
+  | set_connection_statement()
+  | disconnect_statement()
+}
+
+void SQL_session_statement():
+{}
+{
+    set_session_user_identifier_statement()
+  | set_role_statement()
+  | set_local_time_zone_statement()
+  | set_session_characteristics_statement()
+  | set_catalog_statement()
+  | set_schema_statement()
+  | set_names_statement()
+  | set_path_statement()
+  | set_transform_group_statement()
+  | set_session_collation_statement()
+}
+
+void SQL_diagnostics_statement():
+{}
+{
+    get_diagnostics_statement()
+}
+
+void SQL_dynamic_statement():
+{}
+{
+    SQL_descriptor_statement()
+  | prepare_statement()
+  | deallocate_prepared_statement()
+  | describe_statement()
+  | execute_statement()
+  | execute_immediate_statement()
+  | SQL_dynamic_data_statement()
+}
+
+void SQL_dynamic_data_statement():
+{}
+{
+    allocate_cursor_statement()
+  | dynamic_open_statement()
+  | dynamic_fetch_statement()
+  | dynamic_close_statement()
+  | dynamic_delete_statement_positioned()
+  | dynamic_update_statement_positioned()
+}
+
+void SQL_descriptor_statement():
+{}
+{
+    allocate_descriptor_statement()
+  | deallocate_descriptor_statement()
+  | set_descriptor_statement()
+  | get_descriptor_statement()
+}
+
+void declare_cursor():
+{}
+{
+    "DECLARE" cursor_name() cursor_properties()
+    "FOR" cursor_specification()
+}
+
+void cursor_properties():
+{}
+{
+    [ cursor_sensitivity() ] [ cursor_scrollability() ] "CURSOR"
+    [ cursor_holdability() ]
+    [ cursor_returnability() ]
+}
+
+void cursor_sensitivity():
+{}
+{
+    "SENSITIVE"
+  | "INSENSITIVE"
+  | "ASENSITIVE"
+}
+
+void cursor_scrollability():
+{}
+{
+    "SCROLL"
+  | "NO" "SCROLL"
+}
+
+void cursor_holdability():
+{}
+{
+    "WITH" "HOLD"
+  | "WITHOUT" "HOLD"
+}
+
+void cursor_returnability():
+{}
+{
+    "WITH" "RETURN"
+  | "WITHOUT" "RETURN"
+}
+
+void cursor_specification():
+{}
+{
+    query_expression() [ updatability_clause() #Unsupported ]
+}
+
+void updatability_clause():
+{}
+{
+    "FOR" ( "READ" "ONLY" | "UPDATE" [ "OF" column_name_list() ] )
+}
+
+void open_statement():
+{}
+{
+    "OPEN" cursor_name()
+}
+
+void fetch_statement():
+{}
+{
+    "FETCH" [ [ fetch_orientation() ] "FROM" ] cursor_name() "INTO" fetch_target_list()
+}
+
+void fetch_orientation():
+{}
+{
+    "NEXT" | "PRIOR" | "FIRST" | "LAST" | ( "ABSOLUTE" | "RELATIVE" ) simple_value_specification()
+}
+
+void fetch_target_list():
+{}
+{
+    target_specification() ( "," target_specification() )*
+}
+
+void close_statement():
+{}
+{
+    "CLOSE" cursor_name()
+}
+
+void select_statement_single_row():
+{}
+{
+    "SELECT" [ set_quantifier() ] select_list()
+    [ "INTO" select_target_list() ] //TODO(kaikalur): check optional
+    [ table_expression() ] //TODO(kaikalur): check optional
+}
+
+void select_target_list():
+{}
+{
+    target_specification() ( "," target_specification() )*
+}
+
+void delete_statement_positioned():
+{}
+{
+    "DELETE" "FROM" target_table() [ [ "AS" ] identifier() ]
+    "WHERE" "CURRENT" "OF" cursor_name()
+}
+
+void target_table():
+{}
+{
+    table_name()
+  | "ONLY" "(" table_name() ")"
+}
+
+void delete_statement_searched():
+{}
+{
+    "DELETE" "FROM" target_table() [ [ "AS" ] identifier() ]
+    [ "WHERE" search_condition() ]
+}
+
+void truncate_table_statement():
+{}
+{
+    "TRUNCATE" "TABLE" target_table() [ identity_column_restart_option() ]
+}
+
+void identity_column_restart_option():
+{}
+{
+    "CONTINUE" "IDENTITY"
+  | "RESTART" "IDENTITY"
+}
+
+void insert_statement() #Insert:
+{}
+{
+    "INSERT" "INTO" insertion_target() insert_columns_and_source()
+}
+
+void insertion_target():
+{}
+{
+    table_name()
+}
+
+void insert_columns_and_source():
+{}
+{
+    from_subquery()
+  | from_constructor()
+  | from_default()
+}
+
+void from_subquery():
+{}
+{
+    [ "(" insert_column_list() ")" ]
+    [ override_clause() ]
+    query_expression()
+}
+
+void from_constructor():
+{}
+{
+    [ "(" insert_column_list() ")" ]
+    [ override_clause() ]
+    contextually_typed_table_value_constructor()
+}
+
+void override_clause():
+{}
+{
+    "OVERRIDING" "USER" "VALUE"
+  | "OVERRIDING" "SYSTEM" "VALUE"
+}
+
+void from_default():
+{}
+{
+    "DEFAULT" "VALUES"
+}
+
+void insert_column_list():
+{}
+{
+    column_name_list()
+}
+
+void merge_statement():
+{}
+{
+    "MERGE" "INTO" target_table() [ [ "AS" ] identifier() ]
+    "USING" table_reference()
+    "ON" search_condition() merge_operation_specification()
+}
+
+void merge_operation_specification():
+{}
+{
+    ( merge_when_clause() )+
+}
+
+void merge_when_clause():
+{}
+{
+    merge_when_matched_clause()
+  | merge_when_not_matched_clause()
+}
+
+void merge_when_matched_clause():
+{}
+{
+    "WHEN" "MATCHED" [ "AND" search_condition() ]
+    "THEN" merge_update_or_delete_specification()
+}
+
+void merge_update_or_delete_specification():
+{}
+{
+    merge_update_specification()
+  | merge_delete_specification()
+}
+
+void merge_when_not_matched_clause():
+{}
+{
+    "WHEN" "NOT" "MATCHED" [ "AND" search_condition() ]
+    "THEN" merge_insert_specification()
+}
+
+void merge_update_specification():
+{}
+{
+    "UPDATE" "SET" set_clause_list()
+}
+
+void merge_delete_specification():
+{}
+{
+    "DELETE"
+}
+
+void merge_insert_specification():
+{}
+{
+    "INSERT" [ "(" insert_column_list() ")" ]
+    [ override_clause() ]
+    "VALUES" merge_insert_value_list()
+}
+
+void merge_insert_value_list():
+{}
+{
+     "("
+    merge_insert_value_element() ( "," merge_insert_value_element() )*
+     ")"
+}
+
+void merge_insert_value_element():
+{}
+{
+    value_expression()
+  | contextually_typed_value_specification()
+}
+
+void update_statement_positioned():
+{}
+{
+    "UPDATE" target_table() [ [ "AS" ] identifier() ]
+    "SET" set_clause_list()
+    "WHERE" "CURRENT" "OF" cursor_name()
+}
+
+void update_statement_searched():
+{}
+{
+    "UPDATE" target_table() [ [ "AS" ] identifier() ]
+    "SET" set_clause_list()
+    [ "WHERE" search_condition() ]
+}
+
+void set_clause_list():
+{}
+{
+    set_clause() ( "," set_clause() )*
+}
+
+void set_clause():
+{}
+{
+    multiple_column_assignment()
+  | set_target() "=" update_source()
+}
+
+void set_target():
+{}
+{
+    update_target()
+  | mutated_set_clause()
+}
+
+void multiple_column_assignment():
+{}
+{
+    set_target_list() "=" assigned_row()
+}
+
+void set_target_list():
+{}
+{
+     "(" set_target() ( "," set_target() )* ")"
+}
+
+void assigned_row():
+{}
+{
+    contextually_typed_row_value_expression()
+}
+
+void update_target():
+{}
+{
+    identifier() | identifier() left_bracket_or_trigraph() simple_value_specification() right_bracket_or_trigraph()
+}
+
+void mutated_set_clause():
+{}
+{
+    // TODO(kaikalur): fixit mutated_target() "." identifier()
+    identifier() ( "." identifier() )+
+}
+
+void mutated_target():
+{}
+{
+    identifier()
+  | mutated_set_clause()
+}
+
+void update_source():
+{}
+{
+    value_expression()
+  | contextually_typed_value_specification()
+}
+
+void temporary_table_declaration():
+{}
+{
+    "DECLARE" "LOCAL" "TEMPORARY" "TABLE" table_name() table_element_list()
+    [ "ON" "COMMIT" table_commit_action() "ROWS" ]
+}
+
+void call_statement():
+{}
+{
+    "CALL" routine_invocation()
+}
+
+void return_statement():
+{}
+{
+    "RETURN" return_value()
+}
+
+void return_value():
+{}
+{
+    value_expression()
+  | "NULL"
+}
+
+void start_transaction_statement():
+{}
+{
+    "START" "TRANSACTION" [ transaction_characteristics() ]
+}
+
+void set_transaction_statement():
+{}
+{
+    "SET" [ "LOCAL" ] "TRANSACTION" [ transaction_characteristics() ]
+}
+
+void transaction_characteristics():
+{}
+{
+    transaction_mode() ( "," transaction_mode() )*
+}
+
+void transaction_mode():
+{}
+{
+    isolation_level()
+  | transaction_access_mode()
+  | diagnostics_size()
+}
+
+void transaction_access_mode():
+{}
+{
+    "READ" "ONLY"
+  | "READ" "WRITE"
+}
+
+void isolation_level():
+{}
+{
+    "ISOLATION" "LEVEL" level_of_isolation()
+}
+
+void level_of_isolation():
+{}
+{
+    "READ" "UNCOMMITTED"
+  | "READ" "COMMITTED"
+  | "REPEATABLE" "READ"
+  | "SERIALIZABLE"
+}
+
+void diagnostics_size():
+{}
+{
+    "DIAGNOSTICS" "SIZE" simple_value_specification()
+}
+
+void set_constraints_mode_statement():
+{}
+{
+    "SET" "CONSTRAINTS" constraint_name_list() ( "DEFERRED" | "IMMEDIATE" )
+}
+
+void constraint_name_list():
+{}
+{
+    "ALL"
+  | schema_qualified_name() ( "," schema_qualified_name() )*
+}
+
+void savepoint_statement():
+{}
+{
+    "SAVEPOINT" savepoint_specifier()
+}
+
+void savepoint_specifier():
+{}
+{
+    identifier()
+}
+
+void release_savepoint_statement():
+{}
+{
+    "RELEASE" "SAVEPOINT" savepoint_specifier()
+}
+
+void commit_statement():
+{}
+{
+    "COMMIT" [ "WORK" ] [ "AND" [ "NO" ] "CHAIN" ]
+}
+
+void rollback_statement():
+{}
+{
+    "ROLLBACK" [ "WORK" ] [ "AND" [ "NO" ] "CHAIN" ] [ savepoint_clause() ]
+}
+
+void savepoint_clause():
+{}
+{
+    "TO" "SAVEPOINT" savepoint_specifier()
+}
+
+void connect_statement():
+{}
+{
+    "CONNECT" "TO" connection_target()
+}
+
+void connection_target():
+{}
+{
+    simple_value_specification() [ "AS" simple_value_specification() ] [ "USER" simple_value_specification() ]
+  | "DEFAULT"
+}
+
+void set_connection_statement():
+{}
+{
+    "SET" "CONNECTION" connection_object()
+}
+
+void connection_object():
+{}
+{
+    "DEFAULT"
+  | simple_value_specification()
+}
+
+void disconnect_statement():
+{}
+{
+    "DISCONNECT" disconnect_object()
+}
+
+void disconnect_object():
+{}
+{
+    connection_object()
+  | "ALL"
+  | "CURRENT"
+}
+
+void set_session_characteristics_statement():
+{}
+{
+    "SET" "SESSION" "CHARACTERISTICS" "AS" session_characteristic_list()
+}
+
+void session_characteristic_list():
+{}
+{
+    session_characteristic() ( "," session_characteristic() )*
+}
+
+void session_characteristic():
+{}
+{
+    session_transaction_characteristics()
+}
+
+void session_transaction_characteristics():
+{}
+{
+    "TRANSACTION" transaction_mode() ( "," transaction_mode() )*
+}
+
+void set_session_user_identifier_statement():
+{}
+{
+    "SET" "SESSION" "AUTHORIZATION" value_specification()
+}
+
+void set_role_statement():
+{}
+{
+    "SET" "ROLE" role_specification()
+}
+
+void role_specification():
+{}
+{
+    value_specification()
+  | "NONE"
+}
+
+void set_local_time_zone_statement():
+{}
+{
+    "SET" "TIME" "ZONE" set_time_zone_value()
+}
+
+void set_time_zone_value():
+{}
+{
+    interval_value_expression()
+  | "LOCAL"
+}
+
+void set_catalog_statement():
+{}
+{
+    "SET" catalog_name_characteristic()
+}
+
+void catalog_name_characteristic():
+{}
+{
+    "CATALOG" value_specification()
+}
+
+void set_schema_statement():
+{}
+{
+    "SET" schema_name_characteristic()
+}
+
+void schema_name_characteristic():
+{}
+{
+    "SCHEMA" value_specification()
+}
+
+void set_names_statement():
+{}
+{
+    "SET" character_set_name_characteristic()
+}
+
+void character_set_name_characteristic():
+{}
+{
+    "NAMES" value_specification()
+}
+
+void set_path_statement():
+{}
+{
+    "SET" SQL_path_characteristic()
+}
+
+void SQL_path_characteristic():
+{}
+{
+    "PATH" value_specification()
+}
+
+void set_transform_group_statement():
+{}
+{
+    "SET" transform_group_characteristic()
+}
+
+void transform_group_characteristic():
+{}
+{
+    "DEFAULT" "TRANSFORM" "GROUP" value_specification()
+  | "TRANSFORM" "GROUP" "FOR" "TYPE" path_resolved_user_defined_type_name() value_specification()
+}
+
+void set_session_collation_statement():
+{}
+{
+    "SET" "COLLATION" collation_specification() [ "FOR" character_set_specification_list() ]
+  | "SET" "NO" "COLLATION" [ "FOR" character_set_specification_list() ]
+}
+
+void collation_specification():
+{}
+{
+    value_specification()
+}
+
+void allocate_descriptor_statement():
+{}
+{
+    "ALLOCATE" [ "SQL" ] "DESCRIPTOR" descriptor_name() [ "WITH" "MAX" simple_value_specification() ]
+}
+
+void deallocate_descriptor_statement():
+{}
+{
+    "DEALLOCATE" [ "SQL" ] "DESCRIPTOR" descriptor_name()
+}
+
+void get_descriptor_statement():
+{}
+{
+    "GET" [ "SQL" ] "DESCRIPTOR" descriptor_name() get_descriptor_information()
+}
+
+void get_descriptor_information():
+{}
+{
+    get_header_information() ( "," get_header_information() )*
+  | "VALUE" simple_value_specification() get_item_information()
+     ( "," get_item_information() )*
+}
+
+void get_header_information():
+{}
+{
+    simple_target_specification_1() "=" header_item_name()
+}
+
+void header_item_name():
+{}
+{
+    "COUNT"
+  | "KEY_TYPE"
+  | "DYNAMIC_FUNCTION"
+  | "DYNAMIC_FUNCTION_CODE"
+  | "TOP_LEVEL_COUNT"
+}
+
+void get_item_information():
+{}
+{
+    simple_target_specification_2() "=" descriptor_item_name()
+}
+
+void simple_target_specification_1():
+{}
+{
+    simple_target_specification()
+}
+
+void simple_target_specification_2():
+{}
+{
+    simple_target_specification()
+}
+
+void descriptor_item_name():
+{}
+{
+    "CARDINALITY"
+  | "CHARACTER_SET_CATALOG"
+  | "CHARACTER_SET_NAME"
+  | "CHARACTER_SET_SCHEMA"
+  | "COLLATION_CATALOG"
+  | "COLLATION_NAME"
+  | "COLLATION_SCHEMA"
+  | "DATA"
+  | "DATETIME_INTERVAL_CODE"
+  | "DATETIME_INTERVAL_PRECISION"
+  | "DEGREE"
+  | "INDICATOR"
+  | "KEY_MEMBER"
+  | "LENGTH"
+  | "LEVEL"
+  | "NAME"
+  | "NULLABLE"
+  | "OCTET_LENGTH"
+  | "PARAMETER_MODE"
+  | "PARAMETER_ORDINAL_POSITION"
+  | "PARAMETER_SPECIFIC_CATALOG"
+  | "PARAMETER_SPECIFIC_NAME"
+  | "PARAMETER_SPECIFIC_SCHEMA"
+  | "PRECISION"
+  | "RETURNED_CARDINALITY"
+  | "RETURNED_LENGTH"
+  | "RETURNED_OCTET_LENGTH"
+  | "SCALE"
+  | "SCOPE_CATALOG"
+  | "SCOPE_NAME"
+  | "SCOPE_SCHEMA"
+  | "TYPE"
+  | "UNNAMED"
+  | "USER_DEFINED_TYPE_CATALOG"
+  | "USER_DEFINED_TYPE_NAME"
+  | "USER_DEFINED_TYPE_SCHEMA"
+  | "USER_DEFINED_TYPE_CODE"
+}
+
+void set_descriptor_statement():
+{}
+{
+    "SET" [ "SQL" ] "DESCRIPTOR" descriptor_name() set_descriptor_information()
+}
+
+void set_descriptor_information():
+{}
+{
+    set_header_information() ( "," set_header_information() )*
+  | "VALUE" simple_value_specification() set_item_information()
+     ( "," set_item_information() )*
+}
+
+void set_header_information():
+{}
+{
+    header_item_name() "=" simple_value_specification()
+}
+
+void set_item_information():
+{}
+{
+    descriptor_item_name() "=" simple_value_specification()
+}
+
+void prepare_statement():
+{}
+{
+    "PREPARE" SQL_identifier() [ attributes_specification() ]
+    "FROM" simple_value_specification()
+}
+
+void attributes_specification():
+{}
+{
+    "ATTRIBUTES" simple_value_specification()
+}
+
+void preparable_statement():
+{}
+{
+    preparable_SQL_data_statement()
+  | preparable_SQL_schema_statement()
+  | preparable_SQL_transaction_statement()
+  | preparable_SQL_control_statement()
+  | preparable_SQL_session_statement()
+  | preparable_implementation_defined_statement()
+}
+
+void preparable_SQL_data_statement():
+{}
+{
+    delete_statement_searched()
+  | dynamic_single_row_select_statement()
+  | insert_statement()
+  | dynamic_select_statement()
+  | update_statement_searched()
+  | truncate_table_statement()
+  | merge_statement()
+  | preparable_dynamic_delete_statement_positioned()
+  | preparable_dynamic_update_statement_positioned()
+  //TODO(kaikalur):fix the next two
+  //| hold_locator_statement()
+  //| free_locator_statement()
+}
+
+void preparable_SQL_schema_statement():
+{}
+{
+    SQL_schema_statement()
+}
+
+void preparable_SQL_transaction_statement():
+{}
+{
+    SQL_transaction_statement()
+}
+
+void preparable_SQL_control_statement():
+{}
+{
+    SQL_control_statement()
+}
+
+void preparable_SQL_session_statement():
+{}
+{
+    SQL_session_statement()
+}
+
+void dynamic_select_statement():
+{}
+{
+    cursor_specification()
+}
+
+void preparable_implementation_defined_statement():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void cursor_attributes():
+{}
+{
+    ( cursor_attribute() )+
+}
+
+void cursor_attribute():
+{}
+{
+    cursor_sensitivity()
+  | cursor_scrollability()
+  | cursor_holdability()
+  | cursor_returnability()
+}
+
+void deallocate_prepared_statement():
+{}
+{
+    "DEALLOCATE" "PREPARE" SQL_identifier()
+}
+
+void describe_statement():
+{}
+{
+    describe_input_statement()
+  | describe_output_statement()
+}
+
+void describe_input_statement():
+{}
+{
+    "DESCRIBE" "INPUT" SQL_identifier() using_descriptor() [ nesting_option() ]
+}
+
+void describe_output_statement():
+{}
+{
+    "DESCRIBE" [ "OUTPUT" ] described_object() using_descriptor() [ nesting_option() ]
+}
+
+void nesting_option():
+{}
+{
+    "WITH" "NESTING"
+  | "WITHOUT" "NESTING"
+}
+
+void using_descriptor():
+{}
+{
+    "USING" [ "SQL" ] "DESCRIPTOR" descriptor_name()
+}
+
+void described_object():
+{}
+{
+    SQL_identifier()
+  | "CURSOR" extended_cursor_name() "STRUCTURE"
+}
+
+void input_using_clause():
+{}
+{
+    using_arguments()
+  | using_input_descriptor()
+}
+
+void using_arguments():
+{}
+{
+    "USING" using_argument() ( "," using_argument() )*
+}
+
+void using_argument():
+{}
+{
+    general_value_specification()
+}
+
+void using_input_descriptor():
+{}
+{
+    using_descriptor()
+}
+
+void output_using_clause():
+{}
+{
+    into_arguments()
+  | into_descriptor()
+}
+
+void into_arguments():
+{}
+{
+    "INTO" into_argument() ( "," into_argument() )*
+}
+
+void into_argument():
+{}
+{
+    target_specification()
+}
+
+void into_descriptor():
+{}
+{
+    "INTO" [ "SQL" ] "DESCRIPTOR" descriptor_name()
+}
+
+void execute_statement():
+{}
+{
+    "EXECUTE" SQL_identifier() [ result_using_clause() ] [ parameter_using_clause() ]
+}
+
+void result_using_clause():
+{}
+{
+    output_using_clause()
+}
+
+void parameter_using_clause():
+{}
+{
+    input_using_clause()
+}
+
+void execute_immediate_statement():
+{}
+{
+    "EXECUTE" "IMMEDIATE" simple_value_specification()
+}
+
+void dynamic_declare_cursor():
+{}
+{
+    "DECLARE" cursor_name()
+    cursor_properties()
+    "FOR" identifier()
+}
+
+void allocate_cursor_statement():
+{}
+{
+    "ALLOCATE" extended_cursor_name() cursor_intent()
+}
+
+void cursor_intent():
+{}
+{
+    statement_cursor()
+  | result_set_cursor()
+}
+
+void statement_cursor():
+{}
+{
+    cursor_properties()
+    "FOR" extended_identifier()
+}
+
+void result_set_cursor():
+{}
+{
+    [ "CURSOR" ] "FOR" "PROCEDURE" specific_routine_designator()
+}
+
+void dynamic_open_statement():
+{}
+{
+    "OPEN" dynamic_cursor_name() [ input_using_clause() ]
+}
+
+void dynamic_fetch_statement():
+{}
+{
+    "FETCH" [ [ fetch_orientation() ] "FROM" ] dynamic_cursor_name() output_using_clause()
+}
+
+void dynamic_single_row_select_statement():
+{}
+{
+    query_specification()
+}
+
+void dynamic_close_statement():
+{}
+{
+    "CLOSE" dynamic_cursor_name()
+}
+
+void dynamic_delete_statement_positioned():
+{}
+{
+    "DELETE" "FROM" target_table() "WHERE" "CURRENT" "OF" dynamic_cursor_name()
+}
+
+void dynamic_update_statement_positioned():
+{}
+{
+    "UPDATE" target_table() "SET" set_clause_list()
+    "WHERE" "CURRENT" "OF" dynamic_cursor_name()
+}
+
+void preparable_dynamic_delete_statement_positioned():
+{}
+{
+    "DELETE" [ "FROM" target_table() ]
+    "WHERE" "CURRENT" "OF" preparable_dynamic_cursor_name()
+}
+
+void preparable_dynamic_cursor_name():
+{}
+{
+    [ scope_option() ] cursor_name()
+}
+
+void preparable_dynamic_update_statement_positioned():
+{}
+{
+    "UPDATE" [ target_table() ] "SET" set_clause_list()
+    "WHERE" "CURRENT" "OF" preparable_dynamic_cursor_name()
+}
+
+void direct_SQL_statement() #DirectSqlStatement(true):
+{}
+{
+    directly_executable_statement() ";"
+}
+
+void directly_executable_statement():
+{}
+{
+    direct_SQL_data_statement()
+  | SQL_schema_statement()
+  | SQL_transaction_statement()
+  | SQL_connection_statement()
+  | SQL_session_statement()
+  | direct_implementation_defined_statement()
+  | use_statement()  // Non-standard
+}
+
+void direct_SQL_data_statement():
+{}
+{
+    delete_statement_searched()
+  | direct_select_statement_multiple_rows()
+  | insert_statement()
+  | update_statement_searched()
+  | truncate_table_statement()
+  | merge_statement()
+  | temporary_table_declaration()
+}
+
+void direct_implementation_defined_statement():
+{}
+{
+    //!! See the Syntax Rules.
+    character_string_literal() // temp
+}
+
+void direct_select_statement_multiple_rows():
+{}
+{
+    cursor_specification()
+}
+
+void get_diagnostics_statement():
+{}
+{
+    "GET" "DIAGNOSTICS" SQL_diagnostics_information()
+}
+
+void SQL_diagnostics_information():
+{}
+{
+    LOOKAHEAD(3) statement_information()
+  | condition_information()
+  | all_information()
+}
+
+void statement_information():
+{}
+{
+    statement_information_item() ( "," statement_information_item() )*
+}
+
+void statement_information_item():
+{}
+{
+    simple_target_specification() "=" statement_information_item_name()
+}
+
+void statement_information_item_name():
+{}
+{
+    "NUMBER"
+  | "MORE"
+  | "COMMAND_FUNCTION"
+  | "COMMAND_FUNCTION_CODE"
+  | "DYNAMIC_FUNCTION"
+  | "DYNAMIC_FUNCTION_CODE"
+  | "ROW_COUNT"
+  | "TRANSACTIONS_COMMITTED"
+  | "TRANSACTIONS_ROLLED_BACK"
+  | "TRANSACTION_ACTIVE"
+}
+
+void condition_information():
+{}
+{
+    "CONDITION" simple_value_specification() condition_information_item()
+     ( "," condition_information_item() )*
+}
+
+void condition_information_item():
+{}
+{
+    simple_target_specification() "=" condition_information_item_name()
+}
+
+void condition_information_item_name():
+{}
+{
+    "CATALOG_NAME"
+  | "CLASS_ORIGIN"
+  | "COLUMN_NAME"
+  | "CONDITION_NUMBER"
+  | "CONNECTION_NAME"
+  | "CONSTRAINT_CATALOG"
+  | "CONSTRAINT_NAME"
+  | "CONSTRAINT_SCHEMA"
+  | "CURSOR_NAME"
+  | "MESSAGE_LENGTH"
+  | "MESSAGE_OCTET_LENGTH"
+  | "MESSAGE_TEXT"
+  | "PARAMETER_MODE"
+  | "PARAMETER_NAME"
+  | "PARAMETER_ORDINAL_POSITION"
+  | "RETURNED_SQLSTATE"
+  | "ROUTINE_CATALOG"
+  | "ROUTINE_NAME"
+  | "ROUTINE_SCHEMA"
+  | "SCHEMA_NAME"
+  | "SERVER_NAME"
+  | "SPECIFIC_NAME"
+  | "SUBCLASS_ORIGIN"
+  | "TABLE_NAME"
+  | "TRIGGER_CATALOG"
+  | "TRIGGER_NAME"
+  | "TRIGGER_SCHEMA"
+}
+
+void all_information():
+{}
+{
+    all_info_target() "=" "ALL" [ all_qualifier() ]
+}
+
+void all_info_target():
+{}
+{
+    simple_target_specification()
+}
+
+void all_qualifier():
+{}
+{
+    "STATEMENT"
+  | "CONDITION" [ simple_value_specification() ]
+}
+void use_statement() #UseStatement:
+{}
+{
+    "USE" identifier_chain()
+}
+
+void lambda() #Lambda(2):
+{}
+{
+    lambda_params() lambda_body()
+}
+
+void lambda_body() #LambdaBody:
+{}
+{
+    "->" value_expression()
+}
+
+void lambda_params() #LambdaParams:
+{}
+{
+    ( actual_identifier() )#LambdaParam(0)
+  | "(" [ ( actual_identifier() )#LambdaParam(0) ( "," ( actual_identifier() #LambdaParam(0) ) )* ] ")"
+}
+
+void if_not_exists():
+{}
+{
+    "IF" "NOT" "EXISTS"
+}
+
+void identifier_suffix_chain():
+{}
+{
+    ( ( "@" | ":" ) [ actual_identifier() ] )+
+}
+
+void limit_clause() #LimitClause:
+{}
+{
+    "LIMIT" ( <unsigned_integer> | "ALL" )
+}
+
+void presto_generic_type():
+{}
+{
+    presto_array_type()
+  | presto_map_type()
+  | ( <regular_identifier> "(" data_type() ( "," data_type() )* ")" )#ParameterizedType
+}
+
+void presto_array_type() #ArrayType():
+{}
+{
+    "ARRAY" "<" data_type() ">" // Non-standard
+  | "ARRAY" "(" data_type() ")" // Non-standard
+}
+
+void presto_map_type() #MapType():
+{}
+{
+    "MAP" "<" data_type() "," data_type() ">" // Non-standard
+  | "MAP" "(" data_type() "," data_type() ")" // Non-standard
+}
+
+void percent_operator():
+{}
+{
+    <PERCENT: "%">
+}
+
+void distinct():
+{}
+{
+    "DISTINCT"
+}
+
+void grouping_expression():
+{}
+{
+    value_expression()
+} 
+
+void count():
+{}
+{
+    "COUNT" "(" ")"
+  | "\"COUNT\"" "(" [ set_quantifier() ] [ value_expression() | "*" ] ")"   // Just weird
+}
+
+void table_description():
+{}
+{
+    "COMMENT" character_string_literal()
+}
+
+void routine_description():
+{}
+{
+    "COMMENT" character_string_literal()
+}
+
+void column_description():
+{}
+{
+    "COMMENT" character_string_literal()
+}
+
+void presto_aggregation_function():
+{}
+{
+    "NUMERIC_HISTOGRAM"
+  | "HISTOGRAM"
+  | "APPROEX_PERCENTILE"
+  | "MAP_AGG"
+  | "SET_AGG"
+  | "MAP_UNION"
+}
+
+void presto_aggregations():
+{}
+{
+    presto_aggregation_function()
+    "(" [ [ set_quantifier() ] value_expression() ( "," value_expression() )* ] ")"
+}
+
+void try_cast() #TryExpression:
+{}
+{
+    "TRY_CAST" ( "(" cast_operand() "AS" cast_target() ")" )#CastExpression
+}
+
+void varbinary():
+{}
+{
+    "VARBINARY"
+}
+
+void table_attributes():
+{}
+{
+    "(" actual_identifier() "=" value_expression() ( "," actual_identifier() "=" value_expression() )* ")"  // Non-standard
+}
+
+void or_replace():
+{}
+{
+    "OR" "REPLACE"
+}
+
+void udaf_filter():
+{}
+{
+   filter_clause()
+}
+
+void extra_args_to_agg():
+{}
+{
+   ( "," value_expression() )+
+}
+
+void weird_identifiers():
+{}
+{
+    "_"
+}
+
+TOKEN:
+{
+    <identifier_starting_with_underscore: ("_")+ (<regular_identifier>)? > { setKindToIdentifier(matchedToken); }
+  | <generic_unicode: "U&'" ( ~["'"] | ("''") )* "'"> { setUnicodeLiteralType(matchedToken); }
+}
+TOKEN:
+{
+/*
+  <#SQL_terminal_character() ::=
+SQL_language_character()
+;
+
+| <#SQL_language_character() ::=
+simple_Latin_letter()
+| digit()
+| SQL_special_character()
+;
+
+| <#simple_Latin_letter() ::=
+simple_Latin_upper_case_letter()
+| simple_Latin_lower_case_letter()
+;
+
+| <#simple_Latin_upper_case_letter() ::=
+["A"-"Z"]
+;
+
+| <#simple_Latin_lower_case_letter() ::=
+["a"-"z"]
+;
+
+| <#SQL_special_character() ::=
+space()
+| "\""
+| "%"
+| "&"
+| "'"
+| left_paren()
+| right_paren()
+| asterisk()
+| plus_sign()
+| comma()
+| minus_sign()
+| period()
+| solidus()
+| colon()
+| semicolon()
+| less_than_operator()
+| equals_operator()
+| greater_than_operator()
+| question_mark()
+| "["
+| "]"
+| "^"
+| "_"
+| "|"
+| "{"
+| "}"
+;
+;
+
+token() ::=
+nondelimiter_token()
+| delimiter_token()
+;
+
+nondelimiter_token() ::=
+regular_identifier()
+| key_word()
+| unsigned_numeric_literal()
+| national_character_string_literal()
+| binary_string_literal()
+| large_object_length_token()
+| Unicode_delimited_identifier()
+| Unicode_character_string_literal()
+| SQL_language_identifier()
+;
+
+*/
+
+
+<regular_identifier: <identifier_body> >
+
+| <#identifier_body: <identifier_start> ( <identifier_part>  )* >
+
+| <#identifier_part: <identifier_start> | <identifier_extend> >
+
+| <#identifier_start: ["a"-"z"]  // temp
+/*!! See the Syntax Rules.*/
+>
+
+| <#identifier_extend:  ["\u00B7", "0"-"9", "_"] // temp
+//!! See the Syntax Rules.
+>
+
+| <large_object_length_token: ( <digit> )+ <multiplier> >
+
+| <multiplier: ["K", "M", "G", "T", "P"]>
+
+| <delimited_identifier: "\"" (<delimited_identifier_body>)? "\"" >   // Presto allows empty string as an id - yikes!
+
+| <#delimited_identifier_body: ( <delimited_identifier_part> )+ >
+
+| <#delimited_identifier_part: <nondoublequote_character> | <doublequote_symbol> >
+
+| <Unicode_delimited_identifier: "U" "&" "\"" <Unicode_delimiter_body> "\"" ( <Unicode_escape_specifier> )?  >
+
+| <#Unicode_escape_specifier: "UESCAPE" "'" <Unicode_escape_character> "'" >
+
+| <#Unicode_delimiter_body: ( <Unicode_identifier_part> )+ >
+
+| <#Unicode_identifier_part: <delimited_identifier_part> | <Unicode_escape_value> >
+
+| <#Unicode_escape_value: <Unicode_4_digit_escape_value> | <Unicode_6_digit_escape_value> | <Unicode_character_escape_value> >
+
+| <#Unicode_4_digit_escape_value: <Unicode_escape_character> <hexit> <hexit> <hexit> <hexit> >
+
+| <#Unicode_6_digit_escape_value: <Unicode_escape_character> "+" <hexit> <hexit> <hexit> <hexit> <hexit> <hexit> >
+
+| <#Unicode_character_escape_value: <Unicode_escape_character> <Unicode_escape_character> >
+
+| <#Unicode_escape_character:  ~["a"-"z", "0"-"9", "+", "'", "\"", "\n", "\t", " "]  // temp
+//17) If the source language character set contains <reverse solidus>, then let D
+//!! See the Syntax Rules.*/
+>
+
+| <#nondoublequote_character:  ~["\""]
+//!! See the Syntax Rules.
+>
+
+| <#doublequote_symbol: "\"\"" >
+
+/*
+delimiter_token: 
+<character_string_literal>
+| <date_string>
+| <time_string>
+| <timestamp_string>
+| <interval_string>
+| <delimited_identifier>
+| <SQL_special_character>
+| <"> "
+|  ">="
+|  "<="
+|  "||"
+|  "->"
+| "??("
+| "??)"
+|  "::"
+|  ".."
+|  "=>"
+>
+*/
+}
+
+SPECIAL_TOKEN:
+{
+<white_space:  <newline> | [ " ", "\t" ] // temp
+//!! See the Syntax Rules.
+>
+
+| <#newline:  (["\n", "\r"])+
+//!! See the Syntax Rules.
+>
+
+//| <comment: <simple_comment> | <bracketed_comment> >
+| <comment: <simple_comment>  >
+| <#simple_comment: <simple_comment_introducer> ( <comment_character>  )* (<newline>)? >
+
+| <#simple_comment_introducer: "--" >
+
+//| <#bracketed_comment: <bracketed_comment_introducer> <bracketed_comment_contents> <bracketed_comment_terminator> >
+
+
+//| <#bracketed_comment_terminator: "*/" >
+
+//| <#bracketed_comment_contents: ( <comment_character> | <separator>  )* 
+////!! See the Syntax Rules. 
+//>
+
+//| <#comment_character: <nonquote_character> | "'" >
+| <#comment_character: (~["\n", "\r"]) | "'" >
+
+| <skip_separator: (<white_space>)+ >
+
+//| <#key_word: <reserved_word> | <non_reserved_word> > >
+}
+
+
+MORE:
+{
+<bracketed_comment_introducer: "/*" > : comment_contents
+}
+
+<comment_contents>MORE:
+{
+  "*/" : match_comment
+ | <~[]>
+}
+
+<match_comment>SPECIAL_TOKEN:
+{
+  <coment_end: ""> { StoreImage(matchedToken); } : DEFAULT
+}
+
+TOKEN:
+{
+  <#separator: ( 
+    //TODO(kaikalur): fixit -- <comment> | <white_space>  )+ >
+    <white_space>  )+ >
+|
+  <#digit: ["0"-"9"] >
+| <#character_representation: <nonquote_character> | <quote_symbol> >
+
+| <#nonquote_character: ~["'"]
+//!! See the Syntax Rules.
+>
+
+| <#quote_symbol: "''" >
+
+| <quoted_string: "'" ( <character_representation> )* "'" >
+| <national_character_string_literal: "N" "'" ( <character_representation> )* "'" ( <separator> "'" ( <character_representation>  )* "'" )* >
+
+| <unicode_literal: "U" "&" "'" ( <Unicode_representation> )* "'" ( <separator> "'" ( <Unicode_representation>  )* "'" )* <Unicode_escape_specifier> > // TODO(kaikalur) - fixit
+
+| <#Unicode_representation: <character_representation> | <Unicode_escape_value> >
+
+//TODO(kaikalur): fixit
+| <#space: " ">  // temp
+| <binary_string_literal: "X" "'" ( <space> )* ( <hexit>  ( <space>  )* <hexit>  ( <space>  )* )* "'" ( <separator> "'" ( <space>  )* ( <hexit>  ( <space>  )* <hexit> ( <space>  )* )* "'" )* >
+
+| <#hexit: ["a"-"f", "0"-"9"] >
+
+
+//| <exact_numeric_literal: <unsigned_integer> ( "." ( <unsigned_integer>  )? )? | "." <unsigned_integer> >
+
+//| <sign: [ "+", "-" ] >
+
+| <unsigned_integer: ( <digit> )+ >
+| <float_literal: <unsigned_integer> ( "." ( <unsigned_integer>  )? ) | "." <unsigned_integer> >
+
+| <approximate_numeric_literal: <mantissa> "E" <exponent> >
+
+| <#mantissa: <unsigned_integer> | <float_literal> >
+
+| <#exponent: <signed_integer> >
+
+| <#signed_integer: ( [ "+", "-" ] )? <unsigned_integer> >
+
+
+| <SQL_language_identifier: <SQL_language_identifier_start> ( <SQL_language_identifier_part>  )* >
+
+// TODO(srenei): fixit
+| <#simple_Latin_letter: ["a"-"z"]>
+| <#SQL_language_identifier_start: <simple_Latin_letter> >
+
+| <#SQL_language_identifier_part: <simple_Latin_letter> | <digit> | "_" >
+}
+
+<DEFAULT>TOKEN:
+{
+  <illegal_input_char: ~[]> : DEFAULT
+}
