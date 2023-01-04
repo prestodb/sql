@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.manticore.jsqlformatter;
+package com.facebook.coresql.parser;
 
 import java.io.File;
 import java.util.LinkedHashMap;
@@ -25,7 +25,7 @@ import java.util.stream.Stream;
 public class SimpleFileTestIT
         extends SimpleFileTest
 {
-    public static final String TEST_FOLDER_STR = "src/test/resources/com/manticore/jsqlformatter/simpleIT";
+    public static final String TEST_FOLDER_STR = "src/test/resources/com/facebook/coresql/parser/simpleIT";
 
     public static Stream<Map.Entry<SQLKeyEntry, String>> getSqlMap()
     {

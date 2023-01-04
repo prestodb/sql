@@ -11,12 +11,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.manticore.jsqlformatter.expression;
+package com.facebook.coresql.parser.expression;
 
 import com.facebook.coresql.parser.AstNode;
 import com.facebook.coresql.parser.ParseException;
+import com.facebook.coresql.parser.TestUtils;
 import com.facebook.coresql.parser.Unparser;
-import com.manticore.jsqlformatter.TestUtils;
 import org.junit.jupiter.api.Test;
 
 public class ParameterTest

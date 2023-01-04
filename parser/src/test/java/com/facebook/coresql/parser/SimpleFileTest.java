@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.manticore.jsqlformatter;
+package com.facebook.coresql.parser;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -25,7 +25,7 @@ import java.util.stream.Stream;
 public class SimpleFileTest
         extends StandardFileTest
 {
-    public static final String TEST_FOLDER_STR = "src/test/resources/com/manticore/jsqlformatter/simple";
+    public static final String TEST_FOLDER_STR = "src/test/resources/com/facebook/coresql/parser/simple";
 
     public static Stream<Entry<SQLKeyEntry, String>> getSqlMap()
     {

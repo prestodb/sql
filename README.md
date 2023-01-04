@@ -1,6 +1,6 @@
 # Java SQL:2016 Language Frontend
 
-##[Visit our Website.](https://manticore-projects.github.io/sql/index.html)
+[Visit our Website.](https://manticore-projects.github.io/sql/index.html)
 
 ![Build Status](https://github.com/manticore-projects/sql/actions/workflows/maven.yml/badge.svg)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.facebook.presto/presto-coresql/badge.svg)](http://maven-badges.herokuapp.com/maven-central/com.facebook.presto/presto-coresql)

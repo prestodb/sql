@@ -168,29 +168,6 @@
             </plugin>
 
             <plugin>
-                <groupId>io.airlift.maven.plugins</groupId>
-                <artifactId>sphinx-maven-plugin</artifactId>
-                <version>2.1</version>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-enforcer-plugin</artifactId>
-                <configuration>
-                    <rules>
-                        <requireUpperBoundDeps>
-                            <excludes combine.children="append">
-                                <!-- TODO: fix this in Airlift resolver -->
-                                <exclude>org.alluxio:alluxio-shaded-client</exclude>
-                                <exclude>org.codehaus.plexus:plexus-utils</exclude>
-                                <exclude>com.google.guava:guava</exclude>
-                            </excludes>
-                        </requireUpperBoundDeps>
-                    </rules>
-                </configuration>
-            </plugin>
-
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
                 <configuration>

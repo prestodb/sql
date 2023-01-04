@@ -1,7 +1,6 @@
 plugins {
     id 'java'
     id "ca.coglinc2.javacc" version "latest.release"
-
 }
 
 dependencies {
@@ -19,13 +18,13 @@ dependencies {
     testImplementation 'jakarta.validation:jakarta.validation-api:3.0.2'
 
     // https://mvnrepository.com/artifact/io.airlift/log
-    testImplementation 'io.airlift:log:+'
+    testImplementation 'io.airlift:log:206'
 
     // https://mvnrepository.com/artifact/io.airlift/configuration
-    testImplementation 'io.airlift:configuration:+'
+    testImplementation 'io.airlift:configuration:206'
 
     // https://mvnrepository.com/artifact/io.airlift/bootstrap
-    testImplementation 'io.airlift:bootstrap:+'
+    testImplementation 'io.airlift:bootstrap:206'
 
     // https://mvnrepository.com/artifact/com.google.guava/guava
     testImplementation 'com.google.guava:guava:31.1-jre'
@@ -37,9 +36,49 @@ dependencies {
 java {
     withSourcesJar()
     withJavadocJar()
+}
 
-    //spotbugs
-    //pmd
+test {
+    useJUnitPlatform()
+    failFast=true
+    minHeapSize = "128m"
+    maxHeapSize = "1G"
+    jvmArgs << [
+            '-Djunit.jupiter.execution.parallel.enabled=true',
+            '-Djunit.jupiter.execution.parallel.config.strategy=dynamic',
+            '-Djunit.jupiter.execution.parallel.mode.default=concurrent'
+    ]
+    filter {
+        excludeTestsMatching("IT*")
+        excludeTestsMatching("*IT")
+        excludeTestsMatching("*ITCase")
+    }
+}
+
+tasks.register('optionalTests', Test) {
+    useJUnitPlatform()
+
+    description = 'Runs optional tests.'
+    group = 'verification'
+
+    shouldRunAfter test
+
+    minHeapSize = "128m"
+    maxHeapSize = "1G"
+    jvmArgs << [
+            '-Djunit.jupiter.execution.parallel.enabled=true',
+            '-Djunit.jupiter.execution.parallel.config.strategy=dynamic',
+            '-Djunit.jupiter.execution.parallel.mode.default=concurrent'
+    ]
+    filter {
+        includeTestsMatching("IT*")
+        includeTestsMatching("*IT")
+        includeTestsMatching("*ITCase")
+    }
+
+    testLogging {
+        events "passed"
+    }
 }
 
 compileJavacc {

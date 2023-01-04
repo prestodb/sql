@@ -121,7 +121,7 @@ task renderRR() {
                     "-offset:0",
                     "-width:800",
                     //"-png",
-                    //"-out:target/rr/JSqlParserCC.zip",
+                    //"-out:target/rr/PRESTO_SQL_PARSERCC.zip",
                     "-out:$buildDir/site/sphinx/_static/syntax.xhtml",
                     "$buildDir/rr/syntax.ebnf"
             ]
@@ -142,7 +142,7 @@ Changelog
 
 {{#tags}}
 {{#ifMatches name "^Unreleased.*"}}
-Latest Changes since |JSQLPARSER_VERSION|
+Latest Changes since |PRESTO_SQL_PARSER_VERSION|
 {{/ifMatches}}
 {{#ifMatches name "^(?!Unreleased).*"}}
 Version {{name}}
@@ -171,21 +171,21 @@ task sphinx(type: Exec) {
 .. |_| unicode:: U+00A0 
     :trim: 
 
-.. |JSQLPARSER_EMAIL| replace:: support@manticore-projects.com
-.. |JSQLPARSER_VERSION| replace:: ${getVersion(false)}
-.. |JSQLPARSER_SNAPSHOT_VERSION| replace:: ${getVersion(true)}
-.. |JSQLPARSER_STABLE_VERSION_LINK| raw:: html
+.. |PRESTO_SQL_PARSER_EMAIL| replace:: support@manticore-projects.com
+.. |PRESTO_SQL_PARSER_VERSION| replace:: ${getVersion(false)}
+.. |PRESTO_SQL_PARSER_SNAPSHOT_VERSION| replace:: ${getVersion(true)}
+.. |PRESTO_SQL_PARSER_STABLE_VERSION_LINK| raw:: html
 
-    <a href='http://manticore-projects.com/download/${project.name}-${getVersion(false)}/${project.name}-${getVersion(false)}.jar'>${project.name}-${getVersion(false)}.jar</a>
+    <a href='https://github.com/prestodb/sql/archive/refs/tags/${getVersion(false)}.jar'>${project.name}-${getVersion(false)}.jar</a>
 
-.. |JSQLPARSER_SNAPSHOT_VERSION_LINK| raw:: html
+.. |PRESTO_SQL_PARSER_SNAPSHOT_VERSION_LINK| raw:: html
 
-    <a href='http://manticore-projects.com/download/${project.name}-${getVersion(false)}/${project.name}-${getVersion(true)}.jar'>${project.name}-${getVersion(true)}.jar</a>
+    <a href='https://github.com/prestodb/sql/archive/refs/tags/${getVersion(true)}.jar'>${project.name}-${getVersion(true)}.jar</a>
 
 """
 
     args = [
-            "-Dproject=Java SQL:2016 Parser"
+            "-Dproject=Presto SQL Parser"
             , "-Dcopyright=Sreeni Viswanadha, 2022"
             , "-Dauthor=Sreeni Viswanadha"
             , "-Drelease=${getVersion(false)}"

@@ -4,23 +4,41 @@ Changelog
 ************************
 
 
-Latest Changes since |JSQLPARSER_VERSION|
+Latest Changes since |PRESTO_SQL_PARSER_VERSION|
 =============================================================
 
 
-  * **build: Gradle Build and Rail Road Diagrams**
+  * **build: restore Java 8 compatibility**
+    
+    Andreas Reichel, 2023-01-04
+  * **build: restore Java 8 compatibility**
+    
+    Andreas Reichel, 2023-01-04
+  * **build: restore Java 8 compatibility**
+    
+    Andreas Reichel, 2023-01-04
+  * **doc: fix pages**
     
     Andreas Reichel, 2023-01-03
-  * **test: Add many more Real Life SQL statements**
+  * **merge**
     
-    Andreas Reichel, 2022-12-27
-  * **style: Tune the Eclipse Formatter Configuration**
+    Andreas Reichel, 2023-01-03
+  * **Squashed commit of the following:**
     
-    Andreas Reichel, 2022-12-27
+    Andreas Reichel, 2022-12-26
   * **doc: Update the readme**
     
     Andreas Reichel, 2022-12-26
   * **fix: Try using native GIT**
+    
+    Andreas Reichel, 2022-12-26
+  * **fix: Try using native GIT**
+    
+    Andreas Reichel, 2022-12-26
+  * **fix: Gradle Wrapper is not needed**
+    
+    Andreas Reichel, 2022-12-26
+  * **fix: Gradle Wrapper is needed**
     
     Andreas Reichel, 2022-12-26
   * **fix: Git Branch is MAIN**

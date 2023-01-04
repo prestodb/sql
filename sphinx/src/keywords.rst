@@ -2,10 +2,10 @@
 Restricted Keywords
 ***********************
 
-The following Keywords are **restricted** in Version |JSQLPARSER_VERSION| and must not be used for **Naming Objects**: 
+The following Keywords are **restricted** in Version |PRESTO_SQL_PARSER_VERSION| and must not be used for **Naming Objects**: 
 
 +----------------------+-------------+-----------+
-| **Keyword**          | JSQL Parser | SQL:2016  |
+| **Keyword**          | Parser      | SQL:2016  |
 +----------------------+-------------+-----------+
 | ABSENT               | Yes         | Yes       | 
 +----------------------+-------------+-----------+

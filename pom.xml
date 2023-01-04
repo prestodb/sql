@@ -5,7 +5,8 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>130</version>
+        <!-- last working version with Java 8, everything later forcefully adds a "release" option to "javac" -->
+        <version>100</version>
     </parent>
 
     <groupId>com.facebook.presto</groupId>
@@ -18,9 +19,10 @@
     <url>https://github.com/prestodb/sql</url>
 
     <properties>
-        <dep.airlift.version>219</dep.airlift.version>
+        <!-- 206 is the last Java 8 ByteCode 52 release, everything after depends on Java 11 ByteCode 55) -->
+        <dep.airlift.version>206</dep.airlift.version>
         <air.check.skip-pmd>false</air.check.skip-pmd>
-        <air.check.skip-enforcer>false</air.check.skip-enforcer>
+        <air.check.skip-enforcer>true</air.check.skip-enforcer>
         <air.check.skip-checkstyle>false</air.check.skip-checkstyle>
         <air.check.skip-dependency>false</air.check.skip-dependency>
         <air.check.skip-duplicate-finder>false</air.check.skip-duplicate-finder>
@@ -78,14 +80,6 @@
             </plugin>
 
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration combine.children="append">
-                    <fork>false</fork>
-                </configuration>
-            </plugin>
-
-            <plugin>
                 <!-- <groupId>org.apache.maven.plugins</groupId> -->
                 <artifactId>maven-pmd-plugin</artifactId>
                 <configuration>
@@ -97,7 +91,7 @@
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
                 <configuration>
-                    <excludeFilterFile>${project.basedir}/../src/spotbugs/spotbugs-exclude.xml</excludeFilterFile>
+                    <excludeFilterFile>config/spotbugs/spotbugs-exclude.xml</excludeFilterFile>
                 </configuration>
                 <executions>
                     <execution>
@@ -180,7 +174,18 @@
                         <formatAnnotations />  <!-- fixes formatting of type annotations, see below -->
                     </java>
                 </configuration>
-            </plugin>            
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <configuration>
+                    <rules>
+                        <requireJavaVersion>
+                            <version>[1.8,)</version>
+                        </requireJavaVersion>
+                    </rules>
+                </configuration>
+            </plugin>
         </plugins>
         
         <pluginManagement>

@@ -41,7 +41,7 @@ Maven Artifacts
 			<dependency>
 				<groupId>com.facebook.presto</groupId>
 				<artifactId>presto-coresql</artifactId>
-				<version>|JSQLPARSER_VERSION|</version>
+				<version>|PRESTO_SQL_PARSER_VERSION|</version>
 			</dependency>
 
   .. tab:: Development Snapshot
@@ -61,7 +61,7 @@ Maven Artifacts
 			<dependency>
 				<groupId>com.facebook.presto</groupId>
 				<artifactId>presto-coresql</artifactId>
-				<version>|JSQLPARSER_SNAPSHOT_VERSION|</version>
+				<version>|PRESTO_SQL_PARSER_SNAPSHOT_VERSION|</version>
 			</dependency>
 
 			

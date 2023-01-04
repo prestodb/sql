@@ -11,9 +11,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.manticore.jsqlformatter;
+package com.facebook.coresql.parser;
 
-import com.facebook.coresql.parser.ParseException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -38,7 +37,7 @@ public class StandardFileTest
     public static final Pattern COMMENT_PATTERN = Pattern.compile(
             "'[^']*+'|\"[^\"]*+\"|(^/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/\\s?\\n?|/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/|--.*?\\r?[\\n])",
             Pattern.DOTALL | Pattern.MULTILINE | Pattern.UNIX_LINES);
-    public static final String TEST_FOLDER_STR = "src/test/resources/com/manticore/jsqlformatter/standard";
+    public static final String TEST_FOLDER_STR = "src/test/resources/com/facebook/coresql/parser/standard";
     public static final FilenameFilter FILENAME_FILTER = new FilenameFilter()
     {
         @Override

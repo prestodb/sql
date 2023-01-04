@@ -6,7 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'presto-sql'
+project = 'Presto SQL Parser'
 copyright = '2022, Andreas Reichel'
 author = 'Andreas Reichel'
 release = '0.2'
@@ -30,4 +30,5 @@ source_suffix = ['.rst', '.md']
 
 html_theme = 'alabaster'
 html_static_path = ['_static']
+html_logo = '_static/logo-presto-color.svg'
 

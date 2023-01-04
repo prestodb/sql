@@ -1,6 +1,6 @@
-############################
-Java SQL:2016 Parser Library
-############################
+##############################
+Presto SQL:2016 Parser Library
+##############################
 
 .. toctree::
    :maxdepth: 2
@@ -21,17 +21,17 @@ Java SQL:2016 Parser Library
 .. image:: https://www.javadoc.io/badge/com.facebook.presto/presto-coresql.svg
     :alt: Java Docs
 
-**Java SQL:2016 Parser** is a SQL statement parser built from JavaCC. It translates SQLs in a traversable hierarchy of Java classes.
+**Presto SQL:2016 Parser** is a SQL statement parser built from JavaCC. It translates SQLs in a traversable hierarchy of Java classes.
 
-Latest stable release: |JSQLPARSER_STABLE_VERSION_LINK|
+Latest stable release: |PRESTO_SQL_PARSER_STABLE_VERSION_LINK|
 
-Development version: |JSQLPARSER_SNAPSHOT_VERSION_LINK|
+Development version: |PRESTO_SQL_PARSER_SNAPSHOT_VERSION_LINK|
 
 ******************************
 SQL Dialects
 ******************************
 
-**JSqlParser** is SQL:2016 compliant and provides support various RDBMS such as:
+**Presto SQL:2016 Parser** is SQL:2016 compliant and provides support various RDBMS such as:
 
     * Oracle Database
     * MS SqlServer
@@ -52,7 +52,8 @@ Features
 
     * Nested Expressions (e.g. Sub-Selects)
     * ``WITH`` clauses
-    * De-Parser for a Statement AST Node, which writes a SQL from Java Objects
+    * Un-Parser for a Statement AST Node
+    * Can generate both Java and C++ Parser/Unparser
 
 
 

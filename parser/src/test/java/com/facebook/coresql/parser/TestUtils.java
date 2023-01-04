@@ -11,14 +11,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.manticore.jsqlformatter;
+package com.facebook.coresql.parser;
 
-import com.facebook.coresql.parser.AstNode;
-import com.facebook.coresql.parser.ParseException;
-import com.facebook.coresql.parser.SimpleCharStream;
-import com.facebook.coresql.parser.SqlParser;
-import com.facebook.coresql.parser.SqlParserTokenManager;
-import com.facebook.coresql.parser.Unparser;
 import hu.webarticum.treeprinter.SimpleTreeNode;
 import hu.webarticum.treeprinter.TreeNode;
 import hu.webarticum.treeprinter.printer.listing.ListingTreePrinter;
