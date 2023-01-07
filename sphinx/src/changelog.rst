@@ -8,6 +8,36 @@ Latest Changes since |PRESTO_SQL_PARSER_VERSION|
 =============================================================
 
 
+  * **chore: remove name reference**
+    
+    Andreas Reichel, 2023-01-06
+  * **Update sphinx.yml**
+    
+    manticore-projects, 2023-01-06
+  * **Update sphinx.yml**
+    
+    manticore-projects, 2023-01-06
+  * **Update sphinx.yml**
+    
+    manticore-projects, 2023-01-06
+  * **Update sphinx.yml**
+    
+    manticore-projects, 2023-01-06
+  * **Update sphinx.yml**
+    
+    manticore-projects, 2023-01-06
+  * **build: fix Github Action**
+    
+    Andreas Reichel, 2023-01-06
+  * **doc: better Railroad diagrams**
+    
+    Andreas Reichel, 2023-01-06
+  * **doc: US compliant wording**
+    
+    Andreas Reichel, 2023-01-06
+  * **doc: fix links and names**
+    
+    Andreas Reichel, 2023-01-04
   * **build: restore Java 8 compatibility**
     
     Andreas Reichel, 2023-01-04

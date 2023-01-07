@@ -122,9 +122,14 @@ task renderRR() {
                     "-width:800",
                     //"-png",
                     //"-out:target/rr/PRESTO_SQL_PARSERCC.zip",
-                    "-out:$buildDir/site/sphinx/_static/syntax.xhtml",
+                    "-out:$buildDir/rr/syntax.xhtml",
                     "$buildDir/rr/syntax.ebnf"
             ]
+        }
+        
+        //@todo: a Java based solution may be more appropriate here
+        exec {
+            commandLine "sh", "-c", "xsltproc sphinx/xhtml2rst.xsl $buildDir/rr/syntax.xhtml > sphinx/src/syntax.rst"
         }
     }
 }
@@ -165,7 +170,7 @@ Version {{name}}
 }
 
 task sphinx(type: Exec) {
-    dependsOn(gitChangelogTask)
+    dependsOn(gitChangelogTask, renderRR)
 
     String PROLOG = """
 .. |_| unicode:: U+00A0 
@@ -203,7 +208,5 @@ task sphinx(type: Exec) {
     ext.output = {
         return standardOutput.toString()
     }
-
-    finalizedBy renderRR
 }
 
