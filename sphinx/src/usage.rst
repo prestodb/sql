@@ -13,58 +13,85 @@ You will need to have ``JDK 8`` or ``JDK 11`` installed.
 
     .. code-block:: shell
 
-			git clone https://github.com/prestodb/sql.git
-			cd sql	
-			mvn install
+            git clone https://github.com/prestodb/sql.git
+            cd sql
+            mvn install
 
   .. tab:: Gradle
 
-	  .. code-block:: shell
+      .. code-block:: shell
     
-			git clone https://github.com/prestodb/sql.git
-			cd sql
-			gradle build
+            git clone https://github.com/prestodb/sql.git
+            cd sql
+            gradle build
 
 
-
-Maven Artifacts
+Build Dependencies
 ==============================
 
 .. tabs::
-	
 
-  .. tab:: Stable Release
 
-		.. code-block:: xml
-			:substitutions:
+  .. tab:: Maven Release
 
-			<dependency>
-				<groupId>com.facebook.presto</groupId>
-				<artifactId>presto-coresql</artifactId>
-				<version>|PRESTO_SQL_PARSER_VERSION|</version>
-			</dependency>
+        .. code-block:: xml
+            :substitutions:
 
-  .. tab:: Development Snapshot
-		
-		.. code-block:: xml
-			:substitutions:			
- 
-			<repositories>
-				<repository>
-					<id>presto-coresql-snapshots</id>
-					<snapshots>
-						<enabled>true</enabled>
-					</snapshots>
-					<url>https://oss.sonatype.org/content/groups/public/</url>
-				</repository>
-			</repositories> 
-			<dependency>
-				<groupId>com.facebook.presto</groupId>
-				<artifactId>presto-coresql</artifactId>
-				<version>|PRESTO_SQL_PARSER_SNAPSHOT_VERSION|</version>
-			</dependency>
+            <dependency>
+                <groupId>com.facebook.presto</groupId>
+                <artifactId>presto-coresql</artifactId>
+                <version>|PRESTO_SQL_PARSER_VERSION|</version>
+            </dependency>
 
-			
+  .. tab:: Maven Snapshot
+
+        .. code-block:: xml
+            :substitutions:
+
+            <repositories>
+                <repository>
+                    <id>presto-coresql-snapshots</id>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                    <url>https://oss.sonatype.org/content/groups/public/</url>
+                </repository>
+            </repositories>
+
+            <dependency>
+                <groupId>com.facebook.presto</groupId>
+                <artifactId>presto-coresql</artifactId>
+                <version>|PRESTO_SQL_PARSER_SNAPSHOT_VERSION|</version>
+            </dependency>
+
+  .. tab:: Gradle Stable
+
+        .. code-block:: groovy
+            :substitutions:
+
+            repositories {
+                mavenCentral()
+            }
+
+            dependencies {
+                implementation 'com.facebook.presto:presto-coresql:|PRESTO_SQL_PARSER_VERSION|'
+            }
+
+  .. tab:: Gradle Snapshot
+
+        .. code-block:: groovy
+            :substitutions:
+
+            repositories {
+                maven {
+                    url = uri('https://oss.sonatype.org/content/groups/public/')
+                }
+            }
+
+            dependencies {
+                implementation 'com.facebook.presto:presto-coresql:|PRESTO_SQL_PARSER_SNAPSHOT_VERSION|'
+            }
+
 Parse a SQL Statements
 ==============================			
 

@@ -53,6 +53,8 @@ test {
         excludeTestsMatching("*IT")
         excludeTestsMatching("*ITCase")
     }
+
+    finalizedBy check
 }
 
 tasks.register('optionalTests', Test) {

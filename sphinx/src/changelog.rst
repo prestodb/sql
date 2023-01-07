@@ -8,67 +8,34 @@ Latest Changes since |PRESTO_SQL_PARSER_VERSION|
 =============================================================
 
 
-  * **chore: remove name reference**
+  * **doc: better RR Diagram integration**
     
-    Andreas Reichel, 2023-01-06
-  * **Update sphinx.yml**
-    
-    manticore-projects, 2023-01-06
-  * **Update sphinx.yml**
-    
-    manticore-projects, 2023-01-06
-  * **Update sphinx.yml**
-    
-    manticore-projects, 2023-01-06
-  * **Update sphinx.yml**
-    
-    manticore-projects, 2023-01-06
-  * **Update sphinx.yml**
-    
-    manticore-projects, 2023-01-06
-  * **build: fix Github Action**
-    
-    Andreas Reichel, 2023-01-06
-  * **doc: better Railroad diagrams**
-    
-    Andreas Reichel, 2023-01-06
+    Andreas Reichel, 2023-01-07
   * **doc: US compliant wording**
     
-    Andreas Reichel, 2023-01-06
-  * **doc: fix links and names**
+    Andreas Reichel, 2023-01-04
+  * **doc: fix 2 more name references**
     
     Andreas Reichel, 2023-01-04
-  * **build: restore Java 8 compatibility**
+  * **refactor: fix links and names**
     
     Andreas Reichel, 2023-01-04
-  * **build: restore Java 8 compatibility**
-    
-    Andreas Reichel, 2023-01-04
-  * **build: restore Java 8 compatibility**
-    
-    Andreas Reichel, 2023-01-04
-  * **doc: fix pages**
+  * **doc: changelog.rst**
     
     Andreas Reichel, 2023-01-03
-  * **merge**
+  * **build: Gradle Build and Rail Road Diagrams**
     
     Andreas Reichel, 2023-01-03
-  * **Squashed commit of the following:**
+  * **test: Add many more Real Life SQL statements**
     
-    Andreas Reichel, 2022-12-26
+    Andreas Reichel, 2022-12-27
+  * **style: Tune the Eclipse Formatter Configuration**
+    
+    Andreas Reichel, 2022-12-27
   * **doc: Update the readme**
     
     Andreas Reichel, 2022-12-26
   * **fix: Try using native GIT**
-    
-    Andreas Reichel, 2022-12-26
-  * **fix: Try using native GIT**
-    
-    Andreas Reichel, 2022-12-26
-  * **fix: Gradle Wrapper is not needed**
-    
-    Andreas Reichel, 2022-12-26
-  * **fix: Gradle Wrapper is needed**
     
     Andreas Reichel, 2022-12-26
   * **fix: Git Branch is MAIN**
