@@ -168,6 +168,6 @@ void weird_identifiers():
 
 TOKEN:
 {
-    <identifier_starting_with_underscore: ("_")+ (<regular_identifier>)? > { setKindToIdentifier(matchedToken); }
+    <identifier_with_underscore: (<regular_identifier>|"_")+ > { setKindToIdentifier(matchedToken); }
   | <generic_unicode: "U&'" ( ~["'"] | ("''") )* "'"> { setUnicodeLiteralType(matchedToken); }
 }

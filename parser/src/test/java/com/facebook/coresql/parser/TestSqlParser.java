@@ -52,6 +52,10 @@ public class TestSqlParser
             "SELECT f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f())))))))))))))))))))))))))))));",
             "SELECT abs, 2 as abs;",
             "SELECT sqrt(x), power(y, 5), myFunction('a') FROM T;",
+            "SELECT 1 ఒకటి;",
+            "SELECT a_b(a,'a', 1);",
+            "SELECT if(regexp_like(content_fbtype,'comment'),content_id,container_post_fbid) as content_id;",
+            "SELECT if(is_test_user(content_fbtype,'comment'),content_id,container_post_fbid) as content_id;",
     };
 
     private AstNode parse(String sql)
