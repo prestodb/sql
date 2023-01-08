@@ -1,0 +1,32 @@
+TOKEN:
+{
+<#Zl: [
+  "\u2028"    //LINE SEPARATOR;Zl;0;WS;;;;;N;;;;;
+ ]>
+
+| <#Zp: [
+   "\u2029"    //PARAGRAPH SEPARATOR;Zp;0;B;;;;;N;;;;;
+]>
+
+| <#Zs: [
+   "\u0020"    //SPACE;Zs;0;WS;;;;;N;;;;;
+ , "\u00A0"    //NO-BREAK SPACE;Zs;0;CS;<noBreak> 0020;;;;N;NON-BREAKING SPACE;;;;
+ , "\u1680"    //OGHAM SPACE MARK;Zs;0;WS;;;;;N;;;;;
+ , "\u2000"    //EN QUAD;Zs;0;WS;2002;;;;N;;;;;
+ , "\u2001"    //EM QUAD;Zs;0;WS;2003;;;;N;;;;;
+ , "\u2002"    //EN SPACE;Zs;0;WS;<compat> 0020;;;;N;;;;;
+ , "\u2003"    //EM SPACE;Zs;0;WS;<compat> 0020;;;;N;;;;;
+ , "\u2004"    //THREE-PER-EM SPACE;Zs;0;WS;<compat> 0020;;;;N;;;;;
+ , "\u2005"    //FOUR-PER-EM SPACE;Zs;0;WS;<compat> 0020;;;;N;;;;;
+ , "\u2006"    //SIX-PER-EM SPACE;Zs;0;WS;<compat> 0020;;;;N;;;;;
+ , "\u2007"    //FIGURE SPACE;Zs;0;WS;<noBreak> 0020;;;;N;;;;;
+ , "\u2008"    //PUNCTUATION SPACE;Zs;0;WS;<compat> 0020;;;;N;;;;;
+ , "\u2009"    //THIN SPACE;Zs;0;WS;<compat> 0020;;;;N;;;;;
+ , "\u200A"    //HAIR SPACE;Zs;0;WS;<compat> 0020;;;;N;;;;;
+ , "\u202F"    //NARROW NO-BREAK SPACE;Zs;0;CS;<noBreak> 0020;;;;N;;;;;
+ , "\u205F"    //MEDIUM MATHEMATICAL SPACE;Zs;0;WS;<compat> 0020;;;;N;;;;;
+ , "\u3000"    //IDEOGRAPHIC SPACE;Zs;0;WS;<wide> 0020;;;;N;;;;;
+]>
+
+| <#UnicodeWhiteSpace: (<Zl> | <Zp> | <Zs>)>
+}

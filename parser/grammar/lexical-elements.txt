@@ -80,12 +80,14 @@ regular_identifier()
 
 | <#identifier_part: <identifier_start> | <identifier_extend> >
 
-| <#identifier_start: ["a"-"z"]  // temp
+| <#identifier_start: (<UnicodeIdentifierStart>)
 /*!! See the Syntax Rules.*/
+/* Unicode char classes: <Ll> | <Lm> | <Lo> | <Lt> | <Lu> | <Nl> */
 >
 
-| <#identifier_extend:  ["\u00B7", "0"-"9", "_"] // temp
+| <#identifier_extend:  ["\u00B7"] | <UnicodeIdentifierExtend>
 //!! See the Syntax Rules.
+/* Unicode char classes: <Mn>, <Mc>, <Nd>, <Pc>, <Cf> */
 >
 
 | <large_object_length_token: ( <digit> )+ <multiplier> >
@@ -150,7 +152,14 @@ delimiter_token:
 
 SPECIAL_TOKEN:
 {
-<white_space:  <newline> | [ " ", "\t" ] // temp
+<white_space:  (<UnicodeWhiteSpace> |  
+                [ "\u0009"    // Horizontal Tabulation
+                 , "\n"       // "\\u000A"    //,   Line Feed
+                 , "\u000B"   // Vertical Tabulation
+                 , "\f"       // "\\u000C"    //, Form Feed
+                 , "\r"       // "\\u000D"    //, Carriage Return
+                 , "\u0085"   // Next Line
+                ])
 //!! See the Syntax Rules.
 >
 
