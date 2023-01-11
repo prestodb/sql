@@ -14,11 +14,11 @@
 
 package com.facebook.coresql.parser.sqllogictest.java;
 
-import com.facebook.airlift.bootstrap.Bootstrap;
-import com.facebook.airlift.log.Logger;
 import com.facebook.coresql.parser.AstNode;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import io.airlift.bootstrap.Bootstrap;
+import io.airlift.log.Logger;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;

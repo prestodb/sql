@@ -1,0 +1,214 @@
+import se.bjurr.gitchangelog.plugin.gradle.GitChangelogTask
+import java.nio.charset.Charset
+
+plugins {
+    id 'java'
+    id "ca.coglinc2.javacc" version "latest.release"
+    id "com.github.spotbugs" version "latest.release"
+    id 'checkstyle'
+    
+    // download the RR tools which have no Maven Repository
+    id "de.undercouch.download" version "latest.release"
+
+    id "se.bjurr.gitchangelog.git-changelog-gradle-plugin" version "latest.release"
+}
+
+allprojects {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven {
+            url 'https://oss.sonatype.org/content/repositories/snapshots'
+        }
+    }
+}
+
+def getVersion = { boolean considerSnapshot ->
+    def major = 0
+    def minor = 0
+    def patch = 0
+    def commit = ""
+    def snapshot =""
+    new ByteArrayOutputStream().withStream { os ->
+        exec {
+            workingDir "$projectDir"
+            args = [
+                    "--no-pager"
+                    , "describe"
+                    , "--tags"
+                    , "--always"
+                    , "--dirty=-SNAPSHOT"
+            ]
+            executable "git"
+            standardOutput = os
+        }
+        def matcher = os.toString() =~ /(\d*)\.(\d*)-(\d*)-([a-zA-Z\d]*)/
+        matcher.find()
+
+        major = matcher[0][1]
+        minor = matcher[0][2]
+        patch = matcher[0][3]
+        commit = matcher[0][4]
+
+        if (considerSnapshot && os.toString().trim().endsWith("-SNAPSHOT")) {
+            minor++
+            snapshot =  "-SNAPSHOT"
+        }
+    }
+    return "${major}.${minor}${snapshot}"
+}
+group = 'com.facebook.presto'
+version = getVersion(true)
+description = 'Java SQL:2016 compliant Parser Suite'
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+test {
+    useJUnitPlatform()
+    // set heap size for the test JVM(s)
+    minHeapSize = "128m"
+    maxHeapSize = "1G"
+    jvmArgs << [
+            '-Djunit.jupiter.execution.parallel.enabled=true',
+            '-Djunit.jupiter.execution.parallel.config.strategy=dynamic',
+            '-Djunit.jupiter.execution.parallel.mode.default=concurrent'
+    ]
+
+    finalizedBy check
+}
+
+checkstyle {
+    sourceSets = [sourceSets.main, sourceSets.test]
+}
+
+task renderRR() {
+    dependsOn ':presto-coresql-parser:compileJavacc'
+    doLast {
+        // these WAR files have been provided as a courtesy by Gunther Rademacher 
+        // and belong to the RR - Railroad Diagram Generator Project
+        // https://github.com/GuntherRademacher/rr
+        //
+        // Hosting at manticore-projects.com is temporary until a better solution is found
+        // Please do not use these files without Gunther's permission
+        download.run {
+            src 'http://manticore-projects.com/download/convert.war'
+            dest "$buildDir/rr/convert.war"
+            overwrite false
+        }
+
+        download.run {
+            src 'http://manticore-projects.com/download/rr.war'
+            dest "$buildDir/rr/rr.war"
+            overwrite false
+        }
+
+        javaexec {
+            standardOutput = new FileOutputStream("$buildDir/rr/syntax.ebnf")
+            main = "-jar"
+            args = [
+                    "$buildDir/rr/convert.war",
+                    "${project(':presto-coresql-parser').buildDir}/generated/jjtree/com/facebook/coresql/parser/parser.jj"
+            ]
+        }
+
+        javaexec {
+            main = "-jar"
+            args = [
+                    "$buildDir/rr/rr.war",
+                    "-noepsilon",
+                    "-color:#4D88FF",
+                    "-offset:0",
+                    "-width:800",
+                    //"-png",
+                    //"-out:target/rr/PRESTO_SQL_PARSERCC.zip",
+                    "-out:$buildDir/rr/syntax.xhtml",
+                    "$buildDir/rr/syntax.ebnf"
+            ]
+        }
+        
+        //@todo: a Java based solution may be more appropriate here
+        exec {
+            commandLine "sh", "-c", "xsltproc sphinx/xhtml2rst.xsl $buildDir/rr/syntax.xhtml > sphinx/src/syntax.rst"
+        }
+    }
+}
+
+task gitChangelogTask(type: GitChangelogTask) {
+    fromRepo = file("$projectDir")
+    file = new File("${projectDir}/sphinx/src/changelog.rst")
+    //fromRef = "4.0"
+    //toRef = "1.1";
+    templateContent ="""
+************************
+Changelog
+************************
+
+
+{{#tags}}
+{{#ifMatches name "^Unreleased.*"}}
+Latest Changes since |PRESTO_SQL_PARSER_VERSION|
+{{/ifMatches}}
+{{#ifMatches name "^(?!Unreleased).*"}}
+Version {{name}}
+{{/ifMatches}}
+=============================================================
+
+ {{#issues}}
+
+  {{#commits}}
+   {{#ifMatches messageTitle "^(?!Merge).*"}}
+  * **{{{messageTitle}}}**
+    
+    {{authorName}}, {{commitDate}}
+   {{/ifMatches}}
+  {{/commits}}
+
+ {{/issues}}
+{{/tags}}
+"""
+}
+
+task sphinx(type: Exec) {
+    dependsOn(gitChangelogTask, renderRR)
+
+    String PROLOG = """
+.. |_| unicode:: U+00A0 
+    :trim: 
+
+.. |PRESTO_SQL_PARSER_EMAIL| replace:: support@manticore-projects.com
+.. |PRESTO_SQL_PARSER_VERSION| replace:: ${getVersion(false)}
+.. |PRESTO_SQL_PARSER_SNAPSHOT_VERSION| replace:: ${getVersion(true)}
+.. |PRESTO_SQL_PARSER_STABLE_VERSION_LINK| raw:: html
+
+    <a href='https://github.com/prestodb/sql/archive/refs/tags/${getVersion(false)}.jar'>${project.name}-${getVersion(false)}.jar</a>
+
+.. |PRESTO_SQL_PARSER_SNAPSHOT_VERSION_LINK| raw:: html
+
+    <a href='https://github.com/prestodb/sql/archive/refs/tags/${getVersion(true)}.jar'>${project.name}-${getVersion(true)}.jar</a>
+
+"""
+
+    args = [
+            "-Dproject=Presto SQL Parser"
+            , "-Dcopyright=Sreeni Viswanadha, 2022"
+            , "-Dauthor=Sreeni Viswanadha"
+            , "-Drelease=${getVersion(false)}"
+            , "-Drst_prolog=$PROLOG"
+            , "sphinx/src"
+            , "$buildDir/site/sphinx"
+    ]
+
+    executable "sphinx-build"
+
+    //store the output instead of printing to the console:
+    standardOutput = new ByteArrayOutputStream()
+
+    //extension method stopTomcat.output() can be used to obtain the output:
+    ext.output = {
+        return standardOutput.toString()
+    }
+}
+

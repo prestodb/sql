@@ -17,8 +17,8 @@ package com.facebook.coresql.parser.sqllogictest.java;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 
-import static com.facebook.airlift.configuration.ConfigBinder.configBinder;
 import static com.google.inject.Scopes.SINGLETON;
+import static io.airlift.configuration.ConfigBinder.configBinder;
 
 public class SqlLogicTestModule
         implements Module

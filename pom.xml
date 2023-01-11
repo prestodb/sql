@@ -3,9 +3,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.facebook.airlift</groupId>
+        <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>99</version>
+        <!-- last working version with Java 8, everything later forcefully adds a "release" option to "javac" -->
+        <version>100</version>
     </parent>
 
     <groupId>com.facebook.presto</groupId>
@@ -18,8 +19,13 @@
     <url>https://github.com/prestodb/sql</url>
 
     <properties>
-        <air.main.basedir>${project.parent.basedir}</air.main.basedir>
-        <dep.airlift.version>0.198</dep.airlift.version>
+        <!-- 206 is the last Java 8 ByteCode 52 release, everything after depends on Java 11 ByteCode 55) -->
+        <dep.airlift.version>206</dep.airlift.version>
+        <air.check.skip-pmd>false</air.check.skip-pmd>
+        <air.check.skip-enforcer>true</air.check.skip-enforcer>
+        <air.check.skip-checkstyle>false</air.check.skip-checkstyle>
+        <air.check.skip-dependency>false</air.check.skip-dependency>
+        <air.check.skip-duplicate-finder>false</air.check.skip-duplicate-finder>
     </properties>
 
     <modules>
@@ -31,19 +37,19 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>com.facebook.airlift</groupId>
+                <groupId>io.airlift</groupId>
                 <artifactId>configuration</artifactId>
                 <version>${dep.airlift.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>com.facebook.airlift</groupId>
+                <groupId>io.airlift</groupId>
                 <artifactId>log</artifactId>
                 <version>${dep.airlift.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>com.facebook.airlift</groupId>
+                <groupId>io.airlift</groupId>
                 <artifactId>bootstrap</artifactId>
                 <version>${dep.airlift.version}</version>
             </dependency>
@@ -74,22 +80,6 @@
             </plugin>
 
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration combine.children="append">
-                    <fork>false</fork>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-checkstyle-plugin</artifactId>
-                <configuration>
-                    <excludes>**/generated-sources/**/*</excludes>
-                </configuration>
-            </plugin>
-
-            <plugin>
                 <!-- <groupId>org.apache.maven.plugins</groupId> -->
                 <artifactId>maven-pmd-plugin</artifactId>
                 <configuration>
@@ -101,7 +91,7 @@
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
                 <configuration>
-                    <excludeFilterFile>${project.basedir}/../src/spotbugs/spotbugs-exclude.xml</excludeFilterFile>
+                    <excludeFilterFile>config/spotbugs/spotbugs-exclude.xml</excludeFilterFile>
                 </configuration>
                 <executions>
                     <execution>
@@ -110,21 +100,13 @@
                 </executions>
             </plugin>
 
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-checkstyle-plugin</artifactId>
-                <configuration>
-                    <excludes>**/generated-sources/**/*</excludes>
-                </configuration>
-            </plugin>
-
             <!-- Always build a jar with the test classes -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <configuration>
                     <!-- do not build an empty jar if the project is
-                         e.g. a pom project -->
+                    e.g. a pom project -->
                     <skipIfEmpty>true</skipIfEmpty>
                     <archive>
                         <manifest>
@@ -135,6 +117,90 @@
                     </archive>
                 </configuration>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <configuration>
+                    <configLocation>config/checkstyle/checkstyle.xml</configLocation>
+                    <suppressionsLocation>config/checkstyle/suppressions.xml</suppressionsLocation>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>2.28.0</version>
+                <configuration>
+                    <!-- optional: limit format enforcement to just the files changed by this feature branch -->
+                    <ratchetFrom>origin/main</ratchetFrom>
+                    <formats>
+                        <!-- you can define as many formats as you want, each is independent -->
+                        <format>
+                            <!-- define the files to apply to -->
+                            <includes>
+                                <include>*.md</include>
+                                <include>.gitignore</include>
+                            </includes>
+                            <!-- define the steps to apply to those files -->
+                            <trimTrailingWhitespace/>
+                            <endWithNewline/>
+                            <indent>
+                                <tabs>true</tabs>
+                                <spacesPerTab>4</spacesPerTab>
+                            </indent>
+                        </format>
+                    </formats>
+                    <!-- define a language-specific format -->
+                    <java>
+                        <!-- These are the defaults, you can override if you want -->
+                        <includes>
+                            <include>src/main/java/**/*.java</include>
+                            <include>src/test/java/**/*.java</include>
+                        </includes>
+
+                        <importOrder /> <!-- standard import order -->
+                        <importOrder>  <!-- or a custom ordering -->
+                            <file>config/eclipse-formatter/eclipse-airlift.importorder</file>
+                        </importOrder>
+
+                        <removeUnusedImports />
+
+                        <eclipse>
+                            <version>4.13.0</version> <!-- optional -->
+                            <file>config/eclipse-formatter/eclipse-airlift.xml</file>
+                        </eclipse>
+
+                        <formatAnnotations />  <!-- fixes formatting of type annotations, see below -->
+                    </java>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <configuration>
+                    <rules>
+                        <requireJavaVersion>
+                            <version>[1.8,)</version>
+                        </requireJavaVersion>
+                    </rules>
+                </configuration>
+            </plugin>
         </plugins>
+        
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>pl.project13.maven</groupId>
+                    <artifactId>git-commit-id-plugin</artifactId>
+                    <configuration>
+                        <useNativeGit>true</useNativeGit>
+                        <generateGitPropertiesFile>true</generateGitPropertiesFile>
+                        <skip>false</skip>
+                        <runOnlyOnce>true</runOnlyOnce>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 </project>

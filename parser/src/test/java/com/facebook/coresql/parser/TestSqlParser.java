@@ -14,9 +14,15 @@
 package com.facebook.coresql.parser;
 
 import com.facebook.coresql.parser.sqllogictest.java.SqlLogicTest;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Stream;
 
 import static com.facebook.coresql.parser.ParserHelper.parseExpression;
 import static com.facebook.coresql.parser.ParserHelper.parseStatement;
@@ -26,61 +32,57 @@ import static com.facebook.coresql.parser.SqlParserConstants.PLUS;
 import static com.facebook.coresql.parser.SqlParserConstants.SQRT;
 import static com.facebook.coresql.parser.SqlParserConstants.tokenImage;
 import static com.facebook.coresql.parser.Unparser.unparse;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
 
 public class TestSqlParser
 {
-    private static final String[] TEST_SQL_TESTSTRINGS = new String[] {
-            "use a.b;",
-            " SELECT 1;",
-            "SELECT a FROM T;",
-            "SELECT a FROM T WHERE p1 > p2;",
-            "SELECT a, b, c FROM T WHERE c1 < c2 and c3 < c4;",
-            "SELECT CASE a WHEN IN ( 1 ) THEN b ELSE c END AS x, b, c FROM T WHERE c1 < c2 and c3 < c4;",
-            "SELECT T.* FROM T JOIN W ON T.x = W.x;",
-            "SELECT NULL;",
-            "SELECT ARRAY[x] FROM T;",
-            "SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;",
-            "CREATE TABLE T AS SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;",
-            "INSERT INTO T SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;",
-            "SELECT ROW_NUMBER() OVER(PARTITION BY x) FROM T;",
-            "SELECT x, SUM(y) OVER (PARTITION BY y ORDER BY 1) AS min\n" +
-                    "FROM (values ('b',10), ('a', 10)) AS T(x, y)\n;",
-            "SELECT\n" +
-                    " CAST(MAP() AS map<bigint,array<boolean>>) AS \"bool_tensor_features\";",
-            "SELECT f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f())))))))))))))))))))))))))))));",
-            "SELECT abs, 2 as abs;",
-            "SELECT sqrt(x), power(y, 5), myFunction('a') FROM T;",
-    };
+    public static Stream<String> sqlStrings()
+    {
+        List<String> sqlStrings = Arrays.asList(
+                "use a.b;",
+                " SELECT 1;",
+                "SELECT a FROM T;",
+                "SELECT a FROM T WHERE p1 > p2;",
+                "SELECT a, b, c FROM T WHERE c1 < c2 and c3 < c4;",
+                "SELECT CASE a WHEN IN ( 1 ) THEN b ELSE c END AS x, b, c FROM T WHERE c1 < c2 and c3 < c4;",
+                "SELECT T.* FROM T JOIN W ON T.x = W.x;",
+                "SELECT NULL;",
+                "SELECT ARRAY[x] FROM T;",
+                "SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;",
+                "CREATE TABLE T AS SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;",
+                "INSERT INTO T SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;",
+                "SELECT ROW_NUMBER() OVER(PARTITION BY x) FROM T;",
+                "SELECT x, SUM(y) OVER (PARTITION BY y ORDER BY 1) AS min\n" + "FROM (values ('b',10), ('a', 10)) AS T(x, y)\n;",
+                "SELECT\n" + " CAST(MAP() AS map<bigint,array<boolean>>) AS \"bool_tensor_features\";",
+                "SELECT f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f())))))))))))))))))))))))))))));",
+                "SELECT abs, 2 as abs;",
+                "SELECT sqrt(x), power(y, 5), myFunction('a') FROM T;",
+                "SELECT concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat(concat('1','2'),'3'),'4'),'5'),'6'),'7'),'8'),'9'),'10'),'11'),'12'),'13'),'14'),'15'),'16'),'17'),'18'),'19'),'20'),'21'),col1 FROM tbl t1;");
+        return sqlStrings.stream();
+    }
 
     private AstNode parse(String sql)
     {
         return parseStatement(sql);
     }
 
-    @Test
-    public void smokeTest()
+    @ParameterizedTest(name = "SQL {0}")
+    @MethodSource("sqlStrings")
+    public void smokeTest(String sqlStr)
     {
-        for (String sql : TEST_SQL_TESTSTRINGS) {
-            assertNotNull(parse(sql));
-        }
+        Assertions.assertNotNull(parse(sqlStr), "Failed SQL:\n" + sqlStr);
+    }
+
+    @ParameterizedTest(name = "SQL {0}")
+    @MethodSource("sqlStrings")
+    public void parseUnparseTest(String sqlStr)
+    {
+        AstNode ast = parse(sqlStr);
+        Assertions.assertNotNull(ast);
+        Assertions.assertEquals(sqlStr.trim(), unparse(ast).trim(), "Failed SQL:\n" + sqlStr);
     }
 
     @Test
-    public void parseUnparseTest()
-    {
-        for (String sql : TEST_SQL_TESTSTRINGS) {
-            System.out.println(sql);
-            AstNode ast = parse(sql);
-            assertNotNull(ast);
-            assertEquals(sql.trim(), unparse(ast).trim());
-        }
-    }
-
-    @Test
-    public void sqlLogicTest()
-            throws IOException
+    public void sqlLogicTest() throws IOException
     {
         SqlLogicTest.execute();
     }
@@ -88,26 +90,28 @@ public class TestSqlParser
     @Test
     public void testGetOperator()
     {
-        assertEquals(parseExpression("x + 10").GetOperator(), PLUS);
-        assertEquals(parseExpression("x < /*comment*/ 10").GetOperator(), LESS_THAN);
-        assertEquals(parseExpression("NOT x").GetOperator(), NOT);
+        Assertions.assertEquals(PLUS, parseExpression("x + 10").GetOperator());
+        Assertions.assertEquals(LESS_THAN, parseExpression("x < /*comment*/ 10").GetOperator());
+        Assertions.assertEquals(NOT, parseExpression("NOT x").GetOperator());
     }
 
     @Test
     public void testGetFunctionName()
     {
-        assertEquals(parseExpression("SQRT(10)").GetFunctionName(), tokenImage[SQRT].substring(1, tokenImage[SQRT].length() - 1));
-        assertEquals(parseExpression("POW(x, 2)").GetFunctionName(), "POW");
-        assertEquals(parseExpression("PoW(x, 2)").GetFunctionName(), "PoW");
-        assertEquals(parseExpression("MyFunction('a')").GetFunctionName(), "MyFunction");
+        Assertions.assertEquals(
+                parseExpression("SQRT(10)").GetFunctionName(),
+                tokenImage[SQRT].substring(1, tokenImage[SQRT].length() - 1));
+        Assertions.assertEquals("POW", parseExpression("POW(x, 2)").GetFunctionName());
+        Assertions.assertEquals("PoW", parseExpression("PoW(x, 2)").GetFunctionName());
+        Assertions.assertEquals("MyFunction", parseExpression("MyFunction('a')").GetFunctionName());
     }
 
     @Test
     public void testIsNegated()
     {
-        assertEquals(parseExpression("a LIKE B").IsNegated(), false);
-        assertEquals(parseExpression("a NOT LIKE B").IsNegated(), true);
-        assertEquals(parseExpression("a IS NULL").IsNegated(), false);
-        assertEquals(parseExpression("a IS NOT NULL").IsNegated(), true);
+        Assertions.assertFalse(parseExpression("a LIKE B").IsNegated());
+        Assertions.assertTrue(parseExpression("a NOT LIKE B").IsNegated());
+        Assertions.assertFalse(parseExpression("a IS NULL").IsNegated());
+        Assertions.assertTrue(parseExpression("a IS NOT NULL").IsNegated());
     }
 }

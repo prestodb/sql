@@ -19,46 +19,68 @@
 
     <dependencies>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.12</version>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.8.1</version>
             <scope>test</scope>
         </dependency>
-
+        
         <dependency>
-            <groupId>org.testng</groupId>
-            <artifactId>testng</artifactId>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>5.8.1</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <version>5.8.1</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
-            <groupId>com.facebook.airlift</groupId>
+            <groupId>io.airlift</groupId>
             <artifactId>configuration</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
-            <groupId>com.facebook.airlift</groupId>
+            <groupId>io.airlift</groupId>
             <artifactId>log</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
-            <groupId>com.facebook.airlift</groupId>
+            <groupId>io.airlift</groupId>
             <artifactId>bootstrap</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/hu.webarticum/tree-printer -->
+        <dependency>
+            <groupId>hu.webarticum</groupId>
+            <artifactId>tree-printer</artifactId>
+            <version>3.0.0</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -87,7 +109,7 @@
             <plugin>
                 <groupId>org.javacc.plugin</groupId>
                 <artifactId>javacc-maven-plugin</artifactId>
-                <version>3.0.2</version>
+                <version>3.0.3</version>
                 <executions>
                     <execution>
                         <id>jcc7jcc</id>
@@ -96,7 +118,6 @@
                             <goal>jjtree-javacc</goal>
                         </goals>
                         <configuration>
-                            <sourceDirectory>target/generated-sources/javacc</sourceDirectory>
                             <outputLanguage>java</outputLanguage>
                         </configuration>
                     </execution>
@@ -147,29 +168,6 @@
             </plugin>
 
             <plugin>
-                <groupId>io.airlift.maven.plugins</groupId>
-                <artifactId>sphinx-maven-plugin</artifactId>
-                <version>2.1</version>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-enforcer-plugin</artifactId>
-                <configuration>
-                    <rules>
-                        <requireUpperBoundDeps>
-                            <excludes combine.children="append">
-                                <!-- TODO: fix this in Airlift resolver -->
-                                <exclude>org.alluxio:alluxio-shaded-client</exclude>
-                                <exclude>org.codehaus.plexus:plexus-utils</exclude>
-                                <exclude>com.google.guava:guava</exclude>
-                            </excludes>
-                        </requireUpperBoundDeps>
-                    </rules>
-                </configuration>
-            </plugin>
-
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
                 <configuration>
@@ -190,9 +188,34 @@
             </plugin>
 
             <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.0.0-M7</version>
+                <configuration>
+                    <properties>
+                        <configurationParameters>
+                            junit.jupiter.conditions.deactivate = *
+                            junit.jupiter.extensions.autodetection.enabled = true
+                            junit.jupiter.testinstance.lifecycle.default = per_class
+                            junit.jupiter.execution.parallel.enabled = true
+                        </configurationParameters>
+                    </properties>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>integration-test</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0-M7</version>
                 <configuration combine.children="append">
+                    <trimStackTrace>true</trimStackTrace>
                     <includes>
                         <include>**/*.java</include>
                         <include>target/**/*.java</include>
@@ -201,6 +224,8 @@
                     <excludes>
                         <exclude>**/*jmhTest*.java</exclude>
                         <exclude>**/*jmhType*.java</exclude>
+                        <!-- those shall be handled by the FAIL SAFE plugin only -->
+                        <exclude>**/*TestIT.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>
@@ -222,6 +247,14 @@
                     </archive>
                 </configuration>
             </plugin>
+            
+            <plugin>
+                <groupId>pl.project13.maven</groupId>
+                <artifactId>git-commit-id-plugin</artifactId>
+                <configuration>
+                    <useNativeGit>true</useNativeGit>
+                </configuration>
+            </plugin>
         </plugins>
 
         <pluginManagement>
@@ -233,7 +266,7 @@
                         <dependency>
                             <groupId>net.java.dev.javacc</groupId>
                             <artifactId>javacc</artifactId>
-                            <version>7.0.10</version>
+                            <version>7.0.12</version>
                             <scope>runtime</scope>
                         </dependency>
                     </dependencies>
@@ -251,4 +284,65 @@
             </plugins>
         </pluginManagement>
     </build>
+    
+    <reporting>
+        <plugins>
+            <!-- JJDoc report generating the BNF documentation -->
+            <plugin>
+                <groupId>org.javacc.plugin</groupId>
+                <artifactId>javacc-maven-plugin</artifactId>
+                <version>3.0.3</version>
+                <configuration>
+                    <!-- 
+                    /**
+                    * A flag to specify the output format for the generated documentation. If set to <code>true</code>, JJDoc will
+                    * generate a plain text description of the BNF. Some formatting is done via tab characters, but the intention is to
+                    * leave it as plain as possible. Specifying <code>false</code> causes JJDoc to generate a hyperlinked HTML document
+                    * unless the parameter {@link #bnf} has been set to <code>true</code>. Default value is <code>false</code>.
+                    * 
+                    * @parameter expression="${text}"
+                    */
+                    -->
+                    <text>true</text>
+                    
+                    <!--
+                    /**
+                    * A flag whether to generate a plain text document with the unformatted BNF. Note that setting this option to
+                    * <code>true</code> is only effective if the parameter {@link #text} is <code>false</code>. Default value is
+                    * <code>false</code>.
+                    * 
+                    * @parameter expression="${bnf}"
+                    * @since 2.6
+                    */
+                    -->
+                    <bnf>true</bnf>
+                    
+                    <!--
+                    /**
+                    * This option controls the structure of the generated HTML output. If set to <code>true</code>, a single HTML
+                    * table for the entire BNF is generated. Setting it to <code>false</code> will produce one table for every
+                    * production in the grammar.
+                    * 
+                    * @parameter expression="${oneTable}" default-value=true
+                    */
+                    -->
+                    <oneTable>false</oneTable>
+                    
+                    <!--
+                    /**
+                    * The hypertext reference to an optional CSS file for the generated HTML documents. If specified, this CSS file
+                    * will be included via a <code>&lt;link&gt;</code> element in the HTML documents. Otherwise, the default style will
+                    * be used.
+                    * 
+                    * @parameter expression="${cssHref}"
+                    * @since 2.5
+                    */            
+                    -->
+                    <!-- <cssHref></cssHref> -->
+                    
+                    <outputDirectory>${project.reporting.outputDirectory}</outputDirectory>
+                </configuration>
+            </plugin>
+        </plugins>
+    </reporting>
 </project>

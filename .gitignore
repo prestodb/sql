@@ -2,6 +2,7 @@
 *.ipr
 *.iws
 target/
+build/
 /var
 /*/var/
 /presto-product-tests/**/var/
@@ -25,3 +26,8 @@ benchmark_outputs
 .mvn/timing.properties
 .editorconfig
 node_modules
+nb-configuration.xml
+gradle/
+.gradle/
+gradlew
+gradlew.bat

@@ -14,9 +14,9 @@
 
 package com.facebook.coresql.parser.sqllogictest.java;
 
-import com.facebook.airlift.configuration.Config;
-import com.facebook.airlift.configuration.ConfigDescription;
 import com.facebook.coresql.parser.sqllogictest.java.SqlLogicTest.DatabaseDialect;
+import io.airlift.configuration.Config;
+import io.airlift.configuration.ConfigDescription;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;

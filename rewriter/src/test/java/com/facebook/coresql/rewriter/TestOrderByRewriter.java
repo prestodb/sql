@@ -11,21 +11,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.facebook.coresql.rewriter;
 
 import com.facebook.coresql.parser.AstNode;
 import com.google.common.collect.ImmutableMap;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.Optional;
 
 import static com.facebook.coresql.parser.ParserHelper.parseStatement;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
 
 public class TestOrderByRewriter
 {
@@ -51,58 +47,59 @@ public class TestOrderByRewriter
             "CREATE TABLE T AS SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;",
             "INSERT INTO T SELECT TRANSFORM(ARRAY[x], x -> x + 2) AS arra FROM T;",
             "SELECT ROW_NUMBER() OVER(PARTITION BY x) FROM T;",
-            "SELECT x, SUM(y) OVER (PARTITION BY y ORDER BY 1) AS min\n" +
-                    "FROM (values ('b',10), ('a', 10)) AS T(x, y)\n;",
-            "SELECT\n" +
-                    " CAST(MAP() AS map<bigint,array<boolean>>) AS \"bool_tensor_features\";",
+            "SELECT x, SUM(y) OVER (PARTITION BY y ORDER BY 1) AS min\n" + "FROM (values ('b',10), ('a', 10)) AS T(x, y)\n;",
+            "SELECT\n" + " CAST(MAP() AS map<bigint,array<boolean>>) AS \"bool_tensor_features\";",
             "SELECT f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f())))))))))))))))))))))))))))));",
-            "SELECT abs, 2 as abs;",
-    };
-
-    private static final ImmutableMap<String, String> STATEMENT_TO_REWRITTEN_STATEMENT =
-            new ImmutableMap.Builder<String, String>()
-                    .put("CREATE TABLE blah AS SELECT * FROM T ORDER BY y;",
-                            "CREATE TABLE blah AS SELECT * FROM T;")
-                    .put("INSERT INTO blah SELECT * FROM T ORDER BY y;",
-                            "INSERT INTO blah SELECT * FROM T;")
-                    .put("CREATE TABLE blah AS SELECT * FROM T ORDER BY SUM(payment);",
-                            "CREATE TABLE blah AS SELECT * FROM T;")
-                    .put("INSERT INTO blah SELECT * FROM (SELECT t.date, t.code, t.qty FROM sales AS t ORDER BY t.date) LIMIT 10;",
-                            "INSERT INTO blah SELECT * FROM (SELECT t.date, t.code, t.qty FROM sales AS t) LIMIT 10;")
-                    .put("CREATE TABLE blah AS SELECT * FROM (SELECT * FROM T) ORDER BY z;",
-                            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM T);")
-                    .put("CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x));",
-                            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T));")
-                    .put("CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10) ORDER BY y) ORDER BY z;",
-                            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10));")
-                    .put("CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x) ORDER BY y LIMIT 10) ORDER BY z;",
-                            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T) ORDER BY y LIMIT 10);")
-                    .put("CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x) ORDER BY y) ORDER BY z LIMIT 10;",
-                            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T)) ORDER BY z LIMIT 10;")
-                    .put("CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x) ORDER BY y LIMIT 10) ORDER BY z LIMIT 10;",
-                            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T) ORDER BY y LIMIT 10) ORDER BY z LIMIT 10;")
-                    .put("CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10) ORDER BY y) ORDER BY z LIMIT 10;",
-                            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10)) ORDER BY z LIMIT 10;")
-                    .put("CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10) ORDER BY y LIMIT 10) ORDER BY z;",
-                            "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10) ORDER BY y LIMIT 10);")
-                    .build();
+            "SELECT abs, 2 as abs;"};
+    private static final ImmutableMap<String, String> STATEMENT_TO_REWRITTEN_STATEMENT = new ImmutableMap.Builder<String, String>()
+            .put("CREATE TABLE blah AS SELECT * FROM T ORDER BY y;", "CREATE TABLE blah AS SELECT * FROM T;")
+            .put("INSERT INTO blah SELECT * FROM T ORDER BY y;", "INSERT INTO blah SELECT * FROM T;")
+            .put("CREATE TABLE blah AS SELECT * FROM T ORDER BY SUM(payment);", "CREATE TABLE blah AS SELECT * FROM T;")
+            .put(
+                    "INSERT INTO blah SELECT * FROM (SELECT t.date, t.code, t.qty FROM sales AS t ORDER BY t.date) LIMIT 10;",
+                    "INSERT INTO blah SELECT * FROM (SELECT t.date, t.code, t.qty FROM sales AS t) LIMIT 10;")
+            .put(
+                    "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM T) ORDER BY z;",
+                    "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM T);")
+            .put(
+                    "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x));",
+                    "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T));")
+            .put(
+                    "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10) ORDER BY y) ORDER BY z;",
+                    "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10));")
+            .put(
+                    "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x) ORDER BY y LIMIT 10) ORDER BY z;",
+                    "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T) ORDER BY y LIMIT 10);")
+            .put(
+                    "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x) ORDER BY y) ORDER BY z LIMIT 10;",
+                    "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T)) ORDER BY z LIMIT 10;")
+            .put(
+                    "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x) ORDER BY y LIMIT 10) ORDER BY z LIMIT 10;",
+                    "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T) ORDER BY y LIMIT 10) ORDER BY z LIMIT 10;")
+            .put(
+                    "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10) ORDER BY y) ORDER BY z LIMIT 10;",
+                    "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10)) ORDER BY z LIMIT 10;")
+            .put(
+                    "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10) ORDER BY y LIMIT 10) ORDER BY z;",
+                    "CREATE TABLE blah AS SELECT * FROM (SELECT * FROM (SELECT foo FROM T ORDER BY x LIMIT 10) ORDER BY y LIMIT 10);")
+            .build();
 
     private void assertStatementUnchanged(String originalStatement)
     {
-        assertFalse(getRewriteResult(originalStatement).isPresent());
+        Assertions.assertFalse(getRewriteResult(originalStatement).isPresent());
     }
 
     private void assertStatementRewritten(String originalStatement, String expectedStatement)
     {
         Optional<RewriteResult> result = getRewriteResult(originalStatement);
-        assertTrue(result.isPresent());
-        assertEquals(result.get().getRewrittenSql(), expectedStatement);
+        Assertions.assertTrue(result.isPresent(), originalStatement);
+        Assertions.assertEquals(result.get().getRewrittenSql(), expectedStatement, originalStatement);
     }
 
     private Optional<RewriteResult> getRewriteResult(String originalStatement)
     {
         AstNode ast = parseStatement(originalStatement);
-        assertNotNull(ast);
+        Assertions.assertNotNull(ast);
         return new OrderByRewriter(ast).rewrite();
     }
 
@@ -112,7 +109,6 @@ public class TestOrderByRewriter
         for (Map.Entry<String, String> entry : STATEMENT_TO_REWRITTEN_STATEMENT.entrySet()) {
             assertStatementRewritten(entry.getKey(), entry.getValue());
         }
-
         for (String sql : STATEMENTS_THAT_DONT_NEED_REWRITE) {
             assertStatementUnchanged(sql);
         }
