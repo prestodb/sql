@@ -28,8 +28,6 @@ public class ParameterTest
         // overlaps = 'overlaps'\n" + " AND (CURRENT_TIME, INTERVAL '1' HOUR) OVERLAPS (CURRENT_TIME, INTERVAL -'1'
         // HOUR)\n" + ";";
         String sqlStr = "SELECT /*+parallel*/ sqrt(40);";
-        // String sqlStr = "SELECT :test;";
-        // String sqlStr = "SELECT NEXT VALUE FOR a from b;";
         AstNode astNode = TestUtils.assertParseAndUnparse(sqlStr);
         System.out.println(Unparser.unparse(astNode));
         try {
@@ -38,5 +36,52 @@ public class ParameterTest
         catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Test
+    void testComplexExpression() throws ParseException {
+        String sqlStr = "SELECT ((3.0 >= 4.0 AND 5.0 <= 6.0) OR \n"
+                        + "(7.0 < 8.0 AND 9.0 > 10.0) OR \n"
+                        + "(11.0 = 11.0 AND 19.0 > 20.0) OR \n"
+                        + "(17.0 = 14.0 AND 19.0 > 17.0) OR \n"
+                        + "(17.0 = 18.0 AND 20.0 > 20.0) OR \n"
+                        + "(17.0 = 16.0 AND 19.0 > 20.0) OR \n"
+                        + "(17.0 = 18.0 AND 19.0 > 20.0) OR \n"
+                        + "(17.0 = 18.0 AND 19.0 > 20.0) OR \n"
+                        + "(17.0 = 22.0 AND 19.0 > 20.0) OR \n"
+                        + "(18.0 = 18.0 AND 22.0 > 20.0) OR \n"
+                        + "(17.0 = 18.0 AND 19.0 > 20.0) OR \n"
+                        + "(18.0 = 18.0 AND 22.0 > 20.0) OR \n"
+                        + "(18.0 = 19.0 AND 22.0 > 20.0) OR \n"
+                        + "(117.0 = 22.0 AND 19.0 > 20.0) OR \n"
+                        + "(118.0 = 18.0 AND 22.0 > 20.0) OR \n"
+                        + "(117.0 = 18.0 AND 19.0 > 20.0) OR \n"
+                        + "(17.0 = 18.0 AND 19.0 > 20.0));";
+        AstNode astNode = TestUtils.assertParseAndUnparse(sqlStr);
+    }
+
+    @Test
+    void testComplexExpression1() throws ParseException {
+        String sqlStr = "SELECT ((3.0 >= 4.0 AND 5.0 <= 6.0) OR "
+                        + "(7.0 < 8.0 AND 9.0 > 10.0) OR "
+                        + "(11.0 = 11.0 AND 19.0 > 20.0) OR "
+                        + "(17.0 = 14.0 AND 19.0 > 17.0) OR "
+                        + "(17.0 = 18.0 AND 20.0 > 20.0) OR "
+                        + "(17.0 = 16.0 AND 19.0 > 20.0));";
+        AstNode astNode = TestUtils.assertParseAndUnparse(sqlStr);
+    }
+
+    @Test
+    void testJoin() throws Exception {
+        String sqlStr = "select * from a,b where a.a=b.b;";
+        AstNode astNode = TestUtils.assertParseAndUnparse(sqlStr);
+        System.out.println(TestUtils.formatToTree(astNode));
+    }
+
+    @Test
+    void testUnicode() throws Exception {
+        String sqlStr = "select * from U&\\मकान\\;";
+        AstNode astNode = TestUtils.assertParseAndUnparse(sqlStr);
+        System.out.println(TestUtils.formatToTree(astNode));
     }
 }

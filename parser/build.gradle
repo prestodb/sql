@@ -46,7 +46,8 @@ test {
     jvmArgs << [
             '-Djunit.jupiter.execution.parallel.enabled=true',
             '-Djunit.jupiter.execution.parallel.config.strategy=dynamic',
-            '-Djunit.jupiter.execution.parallel.mode.default=concurrent'
+            '-Djunit.jupiter.execution.parallel.mode.default=concurrent',
+            //'-Xss=256k'
     ]
     filter {
         excludeTestsMatching("IT*")
