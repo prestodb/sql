@@ -12,6 +12,8 @@
 #include "SqlParserTokenManager.h"
 #include "parser.h"
 
+#include "ParserClient.h"
+
 #include <ctime>
 
 using namespace commonsql::parser;
@@ -39,6 +41,7 @@ int main(int argc, char **argv) {
   double time;
   start = clock();
 
+#if 0
   for (int i = 0; i < 1; i++) {
     CharStream *stream = new CharStream(s.c_str(), s.size() - 1, 1, 1);
     SqlParserTokenManager *scanner = new SqlParserTokenManager(stream);
@@ -52,8 +55,16 @@ int main(int argc, char **argv) {
       printf("%s\n", buffer.c_str());
     }
   }
+#endif
+
+  vector<string> tableNames = GetTableNames(s);
+  printf("TableNames: \n");
+  for (string tableName: tableNames) {
+    printf("  %s\n", tableName.c_str());
+  }
 
   finish = clock();
   time = (double(finish)-double(start))/CLOCKS_PER_SEC;
   printf ("Avg parsing time: %lfms\n", (time*1000)/1);
+  
 }

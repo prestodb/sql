@@ -6969,7 +6969,7 @@ void direct_SQL_statement() #DirectSqlStatement(true):
 void directly_executable_statement():
 {}
 {
-    direct_SQL_data_statement()
+    LOOKAHEAD(1) direct_SQL_data_statement()
   | SQL_schema_statement()
   | SQL_transaction_statement()
   | SQL_connection_statement()
