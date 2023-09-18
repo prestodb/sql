@@ -1,7 +1,7 @@
-#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "SqlParserConstants.h"
@@ -17,14 +17,21 @@
 using namespace commonsql::parser;
 using namespace std;
 
+static constexpr int kBufferSize = 128;
+
 JAVACC_STRING_TYPE ReadFileFully(char *file_name) {
   JAVACC_STRING_TYPE s;
-  ifstream fp_in;
-  fp_in.open(file_name, ios::in);
+  // fstream includes math.h and conflicts with the DOMAIN keyword on MacOS.
+  // See: https://github.com/prestodb/sql/pull/45
+  // Use C style file reading to avoid this conflict.
+  FILE* fp = fopen(file_name, "r");
+  assert(fp != NULL);
+  char buffer[kBufferSize];
   // Very inefficient.
-  while (!fp_in.eof()) {
-   s += fp_in.get();
+  while (!fgets(buffer, kBufferSize, fp )) {
+   s.append(buffer, kBufferSize);
   }
+  s.append(buffer, strlen(buffer));
   return s;
 }
 
