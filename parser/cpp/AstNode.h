@@ -27,6 +27,7 @@ class AstNode : public SimpleNode {
   AstNode(SqlParser* parser, int id) : SimpleNode(parser, id) {}
   int NumChildren() const { return jjtGetNumChildren(); }
   AstNode* GetChild(int i) const { return static_cast<AstNode*>(jjtGetChild(i)); }
+  AstNode* LastChild() const { return static_cast<AstNode*>(jjtGetChild(NumChildren() - 1)); }
   int Kind() const { return id; }
   JJString GetImage() const { return NumChildren() == 0 ? beginToken->image : ""; }
   JJString toString(const JJString& prefix) const {

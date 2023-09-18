@@ -18,6 +18,7 @@ options {
 
 PARSER_BEGIN(SqlParser)
 
+  inline bool HasError() { return hasError; }
   inline bool IsIdNonReservedWord() {
     auto kind = getToken(1)->kind;
     if (__builtin_expect(kind == regular_identifier, 1) || kind == delimited_identifier || kind == Unicode_delimited_identifier) return true;
@@ -63,27 +64,28 @@ PARSER_BEGIN(SqlParser)
   }
 
   inline bool SyncToSemicolon() {
-    if (hasError || getToken(0)->kind != semicolon) {
-      while (getToken(1)->kind != _EOF && getToken(1)->kind != semicolon) {
-        getNextToken();
-      }
+    while (getToken(1)->kind != EOF && getToken(1)->kind != semicolon) getNextToken();
 
-      if (getToken(1)->kind == semicolon) {
-        getNextToken();
-      }
-
-      hasError = false;
+    while (getToken(1)->kind == semicolon) {
+      getNextToken();
     }
 
+    hasError = false;
     return true;
   }
+
 
   inline bool NotEof() {
     return getToken(1)->kind != _EOF;
   }
 
   void PushNode(Node* node) { jjtree.pushNode(node); }
-  Node* PopNode() { return jjtree.popNode(); }
+  Node* PopNode() { return jjtree.peekNode() != nullptr ? jjtree.popNode() : nullptr; }
+  void Reset() {
+    jjtree.reset();
+    jjtree.clear();
+    hasError = false;
+  }
 
   void jjtreeOpenNodeScope(Node* node) {
     static_cast<AstNode*>(node)->beginToken = getToken(1);
@@ -171,27 +173,19 @@ Node* compilation_unit() #CompilationUnit:
     Token *begin;
 }
 {
+   (
+     LOOKAHEAD({NotEof()})
+     direct_SQL_statement()
+     {
+       if (hasError) {
+         if (jjtree.peekNode() != nullptr) { jjtree.popNode(); }
+         SyncToSemicolon();
+       }
+    }
     ( <semicolon> )*
-    (
-    LOOKAHEAD({NotEof()})
-    { begin = getToken(1); }
-      statement_list()
-    { if (hasError) cout << "Error parsing statement at: " << begin->beginLine; }
-    { SyncToSemicolon(); }
-    )*
-    <EOF>
+   )*
 
-    { if (jjtree.peekNode() != nullptr) return jjtree.peekNode(); return null; }
+   <EOF>
+
+  { return jjtThis; }
 }
-
-void statement_list():
-{}
-{
-    (
-    LOOKAHEAD({NotEof()})
-      direct_SQL_statement()
-      ( <semicolon> )*
-    )+
-    { SyncToSemicolon(); }
-}
-
